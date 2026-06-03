@@ -1,15 +1,24 @@
 import { Router } from "express";
 import multer from "multer";
-import { prisma } from "@jongjongdi/database";
+import { prisma, Prisma } from "@jongjongdi/database";
 import { requireOperator } from "../middleware/operatorAuth";
 import { uploadImageToStorage, deleteFromStorage, pathFromPublicUrl } from "../lib/upload";
 
 const router = Router();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 8 * 1024 * 1024 } });
 
-// GET /api/rooms/admin/list  — all rooms (admin)
-router.get("/admin/list", requireOperator, async (_req, res) => {
+// Parse a YYYY-MM-DD query value into a Date (UTC midnight), or null if invalid
+function parseDate(value: unknown): Date | null {
+  if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return null;
+  const d = new Date(`${value}T00:00:00.000Z`);
+  return isNaN(d.getTime()) ? null : d;
+}
+
+// GET /api/rooms/admin/list  — operator: เฉพาะของตัวเอง · super admin: ทั้งหมด
+router.get("/admin/list", requireOperator, async (req, res) => {
+  const where = req.operator!.role === "SUPER_ADMIN" ? {} : { operatorId: req.operator!.id };
   const rooms = await prisma.room.findMany({
+    where,
     include: {
       images: { where: { isMain: true } },
       types: { orderBy: { order: "asc" } },
@@ -20,48 +29,113 @@ router.get("/admin/list", requireOperator, async (_req, res) => {
   res.json(rooms);
 });
 
-// GET /api/rooms
-router.get("/", async (_req, res) => {
-  const rooms = await prisma.room.findMany({
-    where: { isActive: true, types: { some: {} } },
+// GET /api/rooms?q=&checkIn=YYYY-MM-DD&checkOut=YYYY-MM-DD
+router.get("/", async (req, res) => {
+  const q = typeof req.query.q === "string" ? req.query.q.trim() : "";
+
+  const where: Prisma.RoomWhereInput = { isActive: true, types: { some: {} } };
+  if (q) {
+    where.OR = [
+      { nameTh: { contains: q, mode: "insensitive" } },
+      { nameEn: { contains: q, mode: "insensitive" } },
+      { descriptionTh: { contains: q, mode: "insensitive" } },
+      { descriptionEn: { contains: q, mode: "insensitive" } },
+    ];
+  }
+
+  let rooms = await prisma.room.findMany({
+    where,
     include: {
       images: { where: { isMain: true } },
       types: { orderBy: { order: "asc" } },
     },
     orderBy: { createdAt: "desc" },
   });
+
+  // Filter by date availability when a valid range is provided
+  const checkIn = parseDate(req.query.checkIn);
+  const checkOut = parseDate(req.query.checkOut);
+  if (checkIn && checkOut && checkOut > checkIn) {
+    const roomIds = rooms.map((r) => r.id);
+    const [blocks, bookings] = await Promise.all([
+      prisma.availabilityBlock.findMany({
+        where: { roomId: { in: roomIds }, startDate: { lt: checkOut }, endDate: { gte: checkIn } },
+        select: { roomId: true },
+      }),
+      prisma.booking.findMany({
+        where: {
+          roomId: { in: roomIds },
+          status: { in: ["CONFIRMED", "CHECKED_IN"] },
+          checkInDate: { lt: checkOut },
+          checkOutDate: { gt: checkIn },
+        },
+        select: { roomId: true },
+      }),
+    ]);
+    const blocked = new Set(blocks.map((b) => b.roomId));
+    const bookedCount = new Map<string, number>();
+    for (const b of bookings) {
+      if (b.roomId) bookedCount.set(b.roomId, (bookedCount.get(b.roomId) ?? 0) + 1);
+    }
+    rooms = rooms.filter((r) => {
+      if (blocked.has(r.id)) return false;
+      const totalQty = r.types.reduce((sum, t) => sum + t.quantity, 0);
+      return (bookedCount.get(r.id) ?? 0) < totalQty;
+    });
+  }
+
   res.json(rooms);
 });
 
 // GET /api/rooms/:slug/availability?month=2025-01
+// Returns the dates in the month that are fully unavailable (blocked, or every
+// room already booked that night), so the calendar can disable them.
 router.get("/:slug/availability", async (req, res) => {
-  const room = await prisma.room.findUnique({ where: { slug: req.params.slug } });
+  const room = await prisma.room.findUnique({
+    where: { slug: req.params.slug },
+    include: { types: { select: { quantity: true } } },
+  });
   if (!room) { res.status(404).json({ error: "Not found" }); return; }
 
-  const month = (req.query.month as string) ?? new Date().toISOString().slice(0, 7);
+  const month = typeof req.query.month === "string" && /^\d{4}-\d{2}$/.test(req.query.month)
+    ? req.query.month
+    : new Date().toISOString().slice(0, 7);
   const [year, mon] = month.split("-").map(Number);
-  const start = new Date(year, mon - 1, 1);
-  const end = new Date(year, mon, 0);
+  const monthStart = new Date(Date.UTC(year, mon - 1, 1));
+  const monthEnd = new Date(Date.UTC(year, mon, 1)); // exclusive: first day of next month
+  const daysInMonth = new Date(Date.UTC(year, mon, 0)).getUTCDate();
+  const totalQuantity = room.types.reduce((sum, t) => sum + t.quantity, 0);
 
   const [bookings, blocks] = await Promise.all([
     prisma.booking.findMany({
       where: {
         roomId: room.id,
         status: { in: ["CONFIRMED", "CHECKED_IN"] },
-        OR: [{ checkInDate: { gte: start, lte: end } }, { checkOutDate: { gte: start, lte: end } }],
+        checkInDate: { lt: monthEnd },
+        checkOutDate: { gt: monthStart },
       },
       select: { checkInDate: true, checkOutDate: true },
     }),
     prisma.availabilityBlock.findMany({
-      where: {
-        roomId: room.id,
-        OR: [{ startDate: { gte: start, lte: end } }, { endDate: { gte: start, lte: end } }],
-      },
+      where: { roomId: room.id, startDate: { lt: monthEnd }, endDate: { gte: monthStart } },
       select: { startDate: true, endDate: true },
     }),
   ]);
 
-  res.json({ bookings, blocks });
+  const unavailable: string[] = [];
+  for (let d = 1; d <= daysInMonth; d++) {
+    const day = new Date(Date.UTC(year, mon - 1, d));
+    const isBlocked = blocks.some((b) => b.startDate <= day && day <= b.endDate);
+    if (isBlocked) { unavailable.push(day.toISOString().slice(0, 10)); continue; }
+    const occupied = bookings.filter(
+      (b) => b.checkInDate && b.checkOutDate && b.checkInDate <= day && day < b.checkOutDate,
+    ).length;
+    if (totalQuantity > 0 && occupied >= totalQuantity) {
+      unavailable.push(day.toISOString().slice(0, 10));
+    }
+  }
+
+  res.json({ unavailable, totalQuantity });
 });
 
 // GET /api/rooms/:slug
@@ -200,6 +274,7 @@ router.post("/:id/images", requireOperator, upload.single("file"), async (req, r
     const roomId = String(req.params.id);
     const room = await prisma.room.findUnique({ where: { id: roomId }, include: { _count: { select: { images: true } } } });
     if (!room) { res.status(404).json({ error: "ไม่พบห้องพัก" }); return; }
+    if (room._count.images >= 10) { res.status(400).json({ error: "อัพโหลดได้สูงสุด 10 รูป" }); return; }
 
     const { url } = await uploadImageToStorage(req.file.buffer, `rooms/${roomId}`);
     const isMain = room._count.images === 0;

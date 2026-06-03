@@ -1,26 +1,40 @@
 "use client";
 
 import { use, useEffect, useState } from "react";
-import { notFound, useRouter } from "next/navigation";
+import { notFound, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { useLang, pick } from "@/lib/lang";
 import ReviewList from "@/components/ReviewList";
 import { getTour, mainImageUrl, type Tour } from "@/lib/api";
+import FavoriteButton from "@/components/FavoriteButton";
 
 export default function TourDetailPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = use(params);
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const wantDate = searchParams.get("date");
   const [tour, setTour] = useState<Tour | null>(null);
   const [loading, setLoading] = useState(true);
   const [lang] = useLang();
   const [selectedSchedule, setSelectedSchedule] = useState<string | null>(null);
+  const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [guests, setGuests] = useState(2);
 
   useEffect(() => {
-    getTour(slug).then((t) => { setTour(t); setLoading(false); });
-  }, [slug]);
+    getTour(slug).then((t) => {
+      setTour(t);
+      // Pre-select the departure matching the searched date (if it has seats)
+      if (t && wantDate) {
+        const match = t.schedules?.find(
+          (s) => s.departureDate.slice(0, 10) === wantDate && s.availableSeats > 0,
+        );
+        if (match) { setSelectedSchedule(match.id); setSelectedDate(match.departureDate.slice(0, 10)); }
+      }
+      setLoading(false);
+    });
+  }, [slug, wantDate]);
 
   if (loading) return <><Navbar /><div className="min-h-screen pt-20 text-center text-slate-400"><i className="fa-solid fa-circle-notch fa-spin text-2xl mt-20"></i></div></>;
   if (!tour) { notFound(); }
@@ -31,7 +45,32 @@ export default function TourDetailPage({ params }: { params: Promise<{ slug: str
   const schedules = tour.schedules ?? [];
   const schedule = schedules.find((s) => s.id === selectedSchedule);
   const total = schedule ? tour.pricePerPerson * guests : 0;
-  const fmtDate = (d: string) => new Date(d).toLocaleDateString(lang === "en" ? "en-US" : "th-TH", { dateStyle: "long" });
+  const dl = lang === "en" ? "en-US" : "th-TH";
+  const fmtDate = (d: string) => new Date(d).toLocaleDateString(dl, { dateStyle: "long" });
+  const fmtWeekday = (d: string) => new Date(d).toLocaleDateString(dl, { weekday: "short" });
+  const fmtDayNum = (d: string) => new Date(d).toLocaleDateString(dl, { day: "numeric" });
+  const fmtMonth = (d: string) => new Date(d).toLocaleDateString(dl, { month: "short" });
+
+  // Group departures by date so the picker is date-first, then time
+  const byDate = new Map<string, typeof schedules>();
+  for (const s of schedules) {
+    const key = s.departureDate.slice(0, 10);
+    if (!byDate.has(key)) byDate.set(key, []);
+    byDate.get(key)!.push(s);
+  }
+  const dates = [...byDate.keys()].sort();
+  const activeDate = selectedDate ?? (schedule ? schedule.departureDate.slice(0, 10) : null);
+  const timesForDate = (activeDate ? byDate.get(activeDate) ?? [] : [])
+    .slice()
+    .sort((a, b) => a.departureTime.localeCompare(b.departureTime));
+
+  function pickDate(date: string) {
+    setSelectedDate(date);
+    const times = byDate.get(date) ?? [];
+    const open = times.filter((s) => s.availableSeats > 0);
+    // Auto-select when the date has a single (open) departure, else let user pick a time
+    setSelectedSchedule(open.length === 1 ? open[0].id : null);
+  }
 
   function handleBook() {
     if (!schedule) return;
@@ -60,6 +99,7 @@ export default function TourDetailPage({ params }: { params: Promise<{ slug: str
               <span><i className="fa-solid fa-users mr-1"></i>{pick("สูงสุด", "Up to", lang)} {tour.maxSeats} {pick("ท่าน/รอบ", "guests/trip", lang)}</span>
             </div>
           </div>
+          <FavoriteButton targetType="TOUR" tourId={tour.id} className="absolute top-4 right-4" />
         </div>
 
         <div className="container mx-auto px-4 md:px-6 py-8 md:py-12">
@@ -80,33 +120,73 @@ export default function TourDetailPage({ params }: { params: Promise<{ slug: str
                 {schedules.length === 0 ? (
                   <p className="text-sm text-slate-400 text-center py-8">{pick("ยังไม่มีรอบที่เปิดจอง", "No upcoming departures", lang)}</p>
                 ) : (
-                  <div className="space-y-3">
-                    {schedules.map((s) => {
-                      const isFull = s.availableSeats <= 0;
-                      const isSelected = selectedSchedule === s.id;
-                      return (
-                        <button
-                          key={s.id}
-                          disabled={isFull}
-                          onClick={() => setSelectedSchedule(s.id)}
-                          className={`w-full flex items-center justify-between p-4 rounded-xl border-2 transition text-left ${
-                            isSelected ? "border-cyan-500 bg-cyan-50" : isFull ? "border-slate-100 bg-slate-50 opacity-60 cursor-not-allowed" : "border-slate-200 hover:border-cyan-300"
-                          }`}
-                        >
-                          <div>
-                            <div className="font-semibold text-slate-800">{fmtDate(s.departureDate)}</div>
-                            <div className="text-sm text-slate-500 mt-0.5">{pick("ออกเดินทาง", "Departure", lang)} {s.departureTime}</div>
-                          </div>
-                          <div className="text-right">
-                            {isFull ? (
-                              <span className="text-xs bg-red-100 text-red-600 px-2 py-1 rounded-full font-medium">{pick("เต็มแล้ว", "Full", lang)}</span>
-                            ) : (
-                              <span className="text-xs bg-green-100 text-green-600 px-2 py-1 rounded-full font-medium">{pick("ว่าง", "Avail", lang)} {s.availableSeats} {pick("ที่", "seats", lang)}</span>
-                            )}
-                          </div>
-                        </button>
-                      );
-                    })}
+                  <div className="space-y-5">
+                    {/* Step 1 — pick a date (horizontal scroll of compact cards) */}
+                    <div>
+                      <div className="text-xs font-semibold text-slate-400 mb-2">
+                        <i className="fa-solid fa-1 bg-slate-100 text-slate-500 w-4 h-4 rounded-full text-[9px] inline-flex items-center justify-center mr-1.5"></i>
+                        {pick("เลือกวันเดินทาง", "Pick a date", lang)}
+                      </div>
+                      <div className="flex gap-2 overflow-x-auto pb-2 -mx-1 px-1 snap-x">
+                        {dates.map((date) => {
+                          const times = byDate.get(date) ?? [];
+                          const seats = times.reduce((sum, s) => sum + Math.max(0, s.availableSeats), 0);
+                          const allFull = seats <= 0;
+                          const isActive = activeDate === date;
+                          return (
+                            <button
+                              key={date}
+                              disabled={allFull}
+                              onClick={() => pickDate(date)}
+                              className={`snap-start shrink-0 w-[72px] py-2.5 rounded-xl border-2 transition text-center ${
+                                isActive ? "border-cyan-500 bg-cyan-50" : allFull ? "border-slate-100 bg-slate-50 opacity-50 cursor-not-allowed" : "border-slate-200 hover:border-cyan-300"
+                              }`}
+                            >
+                              <div className={`text-[11px] font-medium ${isActive ? "text-cyan-600" : "text-slate-400"}`}>{fmtWeekday(date)}</div>
+                              <div className={`text-xl font-bold leading-tight ${isActive ? "text-cyan-700" : "text-slate-700"}`}>{fmtDayNum(date)}</div>
+                              <div className={`text-[11px] ${isActive ? "text-cyan-600" : "text-slate-400"}`}>{fmtMonth(date)}</div>
+                              <div className={`mt-1 text-[9px] font-medium ${allFull ? "text-red-400" : "text-green-600"}`}>
+                                {allFull ? pick("เต็ม", "Full", lang) : `${pick("ว่าง", "", lang)} ${seats}`}
+                              </div>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Step 2 — pick a time on that date */}
+                    {activeDate && (
+                      <div>
+                        <div className="text-xs font-semibold text-slate-400 mb-2">
+                          <i className="fa-solid fa-2 bg-slate-100 text-slate-500 w-4 h-4 rounded-full text-[9px] inline-flex items-center justify-center mr-1.5"></i>
+                          {pick("เลือกเวลาออกเดินทาง", "Pick a departure time", lang)}
+                          <span className="text-slate-300 font-normal ml-1">· {fmtDate(activeDate)}</span>
+                        </div>
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                          {timesForDate.map((s) => {
+                            const isFull = s.availableSeats <= 0;
+                            const isSelected = selectedSchedule === s.id;
+                            return (
+                              <button
+                                key={s.id}
+                                disabled={isFull}
+                                onClick={() => setSelectedSchedule(s.id)}
+                                className={`flex flex-col items-center justify-center py-3 rounded-xl border-2 transition ${
+                                  isSelected ? "border-cyan-500 bg-cyan-50" : isFull ? "border-slate-100 bg-slate-50 opacity-50 cursor-not-allowed" : "border-slate-200 hover:border-cyan-300"
+                                }`}
+                              >
+                                <span className={`text-base font-bold ${isSelected ? "text-cyan-700" : "text-slate-800"}`}>
+                                  <i className="fa-regular fa-clock text-xs mr-1.5"></i>{s.departureTime}
+                                </span>
+                                <span className={`text-[11px] mt-0.5 ${isFull ? "text-red-500" : "text-green-600"}`}>
+                                  {isFull ? pick("เต็มแล้ว", "Full", lang) : `${pick("ว่าง", "Avail", lang)} ${s.availableSeats} ${pick("ที่", "seats", lang)}`}
+                                </span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>

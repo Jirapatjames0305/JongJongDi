@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
+const MAX_IMAGES = 10;
 
 interface ImageItem {
   id: string;
@@ -12,7 +13,7 @@ interface ImageItem {
 }
 
 interface Props {
-  resource: "rooms" | "tours";
+  resource: "rooms" | "tours" | "products";
   resourceId: string;
   resourceName: string;
   onClose: () => void;
@@ -36,26 +37,36 @@ export default function ImageManager({ resource, resourceId, resourceName, onClo
   useEffect(() => { load(); /* eslint-disable-next-line */ }, [resource, resourceId]);
 
   async function handleUpload(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file) return;
+    const selected = Array.from(e.target.files ?? []);
+    e.target.value = "";
+    if (selected.length === 0) return;
+
+    const remaining = MAX_IMAGES - images.length;
+    if (remaining <= 0) { setErr(`อัพโหลดได้สูงสุด ${MAX_IMAGES} รูป`); return; }
+
+    const toUpload = selected.slice(0, remaining);
+    const skipped = selected.length - toUpload.length;
     setUploading(true); setErr("");
     try {
       const token = localStorage.getItem("jjd_token") ?? "";
-      const fd = new FormData();
-      fd.append("file", file);
-      const res = await fetch(`${API}/api/${resource}/${resourceId}/images`, {
-        method: "POST",
-        headers: { Authorization: `Bearer ${token}` },
-        body: fd,
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "อัพโหลดล้มเหลว");
+      for (const file of toUpload) {
+        const fd = new FormData();
+        fd.append("file", file);
+        const res = await fetch(`${API}/api/${resource}/${resourceId}/images`, {
+          method: "POST",
+          headers: { Authorization: `Bearer ${token}` },
+          body: fd,
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error ?? "อัพโหลดล้มเหลว");
+      }
+      if (skipped > 0) setErr(`อัพโหลดได้สูงสุด ${MAX_IMAGES} รูป — ข้าม ${skipped} รูปที่เกิน`);
       load();
     } catch (e) {
       setErr(e instanceof Error ? e.message : "อัพโหลดล้มเหลว");
+      load();
     } finally {
       setUploading(false);
-      e.target.value = "";
     }
   }
 
@@ -93,9 +104,13 @@ export default function ImageManager({ resource, resourceId, resourceName, onClo
 
         <div className="p-6">
           <label className="block mb-4">
-            <span className="block text-xs font-medium text-slate-500 mb-2">เพิ่มรูปภาพ (สูงสุด 8MB)</span>
-            <input type="file" accept="image/*" onChange={handleUpload} disabled={uploading}
+            <span className="block text-xs font-medium text-slate-500 mb-2">
+              เพิ่มรูปภาพ (เลือกได้หลายรูป · สูงสุด {MAX_IMAGES} รูป · 8MB/รูป) — มีแล้ว {images.length}/{MAX_IMAGES}
+            </span>
+            <input type="file" accept="image/*" multiple onChange={handleUpload}
+              disabled={uploading || images.length >= MAX_IMAGES}
               className="w-full text-sm file:mr-3 file:px-4 file:py-2 file:rounded-lg file:border-0 file:bg-blue-50 file:text-blue-700 file:font-medium disabled:opacity-50" />
+            {images.length >= MAX_IMAGES && <p className="text-xs text-amber-600 mt-1"><i className="fa-solid fa-circle-info mr-1"></i>ครบ {MAX_IMAGES} รูปแล้ว — ลบรูปเดิมก่อนเพิ่มรูปใหม่</p>}
             {uploading && <p className="text-xs text-blue-600 mt-1"><i className="fa-solid fa-circle-notch fa-spin mr-1"></i>กำลังอัพโหลด...</p>}
             {err && <p className="text-xs text-red-500 mt-1"><i className="fa-solid fa-circle-exclamation mr-1"></i>{err}</p>}
           </label>

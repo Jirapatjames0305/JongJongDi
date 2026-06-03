@@ -72,6 +72,7 @@ model Operator {
   phone        String
   role         OperatorRole   @default(OPERATOR)
   status       OperatorStatus @default(PENDING)
+  commissionRate Float        @default(0) // ค่าคอมมิชชั่นแพลตฟอร์ม (%) หักจากยอดก่อนโอนให้ operator
   createdAt    DateTime       @default(now())
   updatedAt    DateTime       @updatedAt
 
@@ -92,9 +93,17 @@ model User {
   createdAt    DateTime       @default(now())
   updatedAt    DateTime       @updatedAt
 
-  bookings Booking[]
-  notes    CustomerNote[]
-  reviews  Review[]
+  bookings     Booking[]
+  notes        CustomerNote[]
+  reviews      Review[]
+  favorites    Favorite[]
+  userCoupons  UserCoupon[]
+  savedCards   SavedCard[]
+
+  referralCode String? @unique
+  referredById String?
+  referredBy   User?   @relation("Referrals", fields: [referredById], references: [id])
+  referrals    User[]  @relation("Referrals")
 }
 
 // ─── Room (property / listing — มี types หลายตัว) ─────────────────────────────
@@ -118,6 +127,8 @@ model Room {
   availabilityBlocks AvailabilityBlock[]
   bookings          Booking[]
   seasonPrices      SeasonPrice[]
+  trending          Trending[]
+  favorites         Favorite[]
 }
 
 // ห้องประเภทย่อย (เช่น "ห้อง 2 คน", "วิลล่า 4 คน") — เป็นหน่วยที่จองจริง
@@ -170,6 +181,8 @@ model Tour {
   schedules         TourSchedule[]
   availabilityBlocks AvailabilityBlock[]
   seasonPrices      SeasonPrice[]
+  favorites         Favorite[]
+  trending          Trending[]
 }
 
 model TourImage {
@@ -310,6 +323,8 @@ model Payment {
   updatedAt       DateTime      @updatedAt
 
   booking Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+
+  @@index([status, approvedAt])
 }
 
 // ─── Customer Note ────────────────────────────────────────────────────────────
@@ -321,4 +336,181 @@ model CustomerNote {
   createdAt DateTime @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// ─── Product (marketplace — สินค้าขาย) ───────────────────────────────────────
+
+model Product {
+  id            String   @id @default(cuid())
+  slug          String   @unique
+  nameTh        String
+  nameEn        String
+  descriptionTh String   @db.Text
+  descriptionEn String   @db.Text
+  price         Int
+  oldPrice      Int?
+  unitLabel     String?  // เช่น "/ถุง"
+  location      String?  // เช่น "จันทบุรี"
+  deliveryNote  String?  // เช่น "พร้อมส่งทั่วไทย"
+  badge         String?  // เช่น "Best Seller"
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  images    ProductImage[]
+  trending  Trending[]
+  favorites Favorite[]
+}
+
+model ProductImage {
+  id        String  @id @default(cuid())
+  productId String
+  url       String
+  isMain    Boolean @default(false)
+  order     Int     @default(0)
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+}
+
+// ─── Trending (ฮิตติดกระแส — รายการคัดสรรที่อ้างถึง Room หรือ Product) ─────────
+// promo display fields (badge / oldPrice / locationLabel / ctaLabel) เป็น override
+// ถ้า null → API จะ fallback ไปใช้ค่าจาก entity ต้นทาง (Product)
+
+enum TrendingTargetType {
+  ROOM
+  TOUR
+  PRODUCT
+}
+
+model Trending {
+  id            String             @id @default(cuid())
+  targetType    TrendingTargetType
+  roomId        String?
+  tourId        String?
+  productId     String?
+  order         Int                @default(0)
+  isActive      Boolean            @default(true)
+  badge         String?
+  oldPrice      Int?
+  locationLabel String?
+  ctaLabel      String?
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
+
+  room    Room?    @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  tour    Tour?    @relation(fields: [tourId], references: [id], onDelete: Cascade)
+  product Product? @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([order])
+}
+
+// ─── Favorite (รายการโปรด) ────────────────────────────────────────────────────
+
+enum FavoriteTargetType {
+  ROOM
+  TOUR
+  PRODUCT
+}
+
+model Favorite {
+  id         String             @id @default(cuid())
+  userId     String
+  targetType FavoriteTargetType
+  roomId     String?
+  tourId     String?
+  productId  String?
+  createdAt  DateTime           @default(now())
+
+  user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  room    Room?    @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  tour    Tour?    @relation(fields: [tourId], references: [id], onDelete: Cascade)
+  product Product? @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, roomId])
+  @@unique([userId, tourId])
+  @@unique([userId, productId])
+  @@index([userId])
+}
+
+// ─── Coupon / Voucher ─────────────────────────────────────────────────────────
+
+enum CouponDiscountType {
+  PERCENT
+  FIXED
+}
+
+model Coupon {
+  id            String             @id @default(cuid())
+  code          String             @unique
+  description   String?
+  discountType  CouponDiscountType
+  discountValue Int
+  minAmount     Int?
+  maxDiscount   Int?
+  expiresAt     DateTime?
+  usageLimit    Int?
+  usageCount    Int                @default(0)
+  isActive      Boolean            @default(true)
+  createdAt     DateTime           @default(now())
+
+  userCoupons UserCoupon[]
+}
+
+model UserCoupon {
+  id        String    @id @default(cuid())
+  userId    String
+  couponId  String
+  source    String    @default("CLAIM") // "CLAIM" | "REFERRAL_NEW" | "REFERRAL_REWARD"
+  claimedAt DateTime  @default(now())
+  usedAt    DateTime?
+  bookingId String?
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  coupon Coupon @relation(fields: [couponId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([userId, couponId, source])
+}
+
+// ─── SavedCard (บัตรเครดิต/เดบิตที่บันทึกไว้) ────────────────────────────────
+
+enum CardType {
+  VISA
+  MASTERCARD
+  JCB
+  AMEX
+  UNIONPAY
+}
+
+model SavedCard {
+  id          String   @id @default(cuid())
+  userId      String
+  nickname    String?
+  cardType    CardType
+  lastFour    String
+  expiryMonth Int
+  expiryYear  Int
+  cardHolder  String
+  isDefault   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+// ─── BankAccount (บัญชีธนาคารกลางของแพลตฟอร์ม ให้ลูกค้าโอนเงิน) ────────────────
+
+model BankAccount {
+  id            String   @id @default(cuid())
+  bankName      String   // ชื่อธนาคาร เช่น "กสิกรไทย"
+  accountName   String   // ชื่อบัญชี
+  accountNumber String   // เลขที่บัญชี
+  branch        String?  // สาขา (ไม่บังคับ)
+  isActive      Boolean  @default(true)
+  order         Int      @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([order])
 }

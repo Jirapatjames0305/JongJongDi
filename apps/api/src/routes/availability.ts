@@ -4,9 +4,14 @@ import { requireOperator } from "../middleware/operatorAuth";
 
 const router = Router();
 
-// GET /api/availability/blocks
-router.get("/blocks", requireOperator, async (_req, res) => {
+// GET /api/availability/blocks — operator: เฉพาะของตัวเอง · super admin: ทั้งหมด
+router.get("/blocks", requireOperator, async (req, res) => {
+  const operatorId = req.operator!.id;
+  const where = req.operator!.role === "SUPER_ADMIN"
+    ? {}
+    : { OR: [{ room: { operatorId } }, { tour: { operatorId } }] };
   const blocks = await prisma.availabilityBlock.findMany({
+    where,
     include: {
       room: { select: { nameTh: true, slug: true } },
       tour: { select: { nameTh: true, slug: true } },

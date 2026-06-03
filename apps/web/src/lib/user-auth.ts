@@ -8,7 +8,7 @@ export interface UserInfo {
   role: string;
 }
 
-export async function userRegister(data: { name: string; phone: string; email?: string; password: string }) {
+export async function userRegister(data: { name: string; phone: string; email?: string; password: string; referralCode?: string }) {
   const res = await fetch(`${API}/api/users/register`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },

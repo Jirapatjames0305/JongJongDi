@@ -41,8 +41,8 @@ export default function AvailabilityPage() {
     try {
       const [blocksData, roomsRes, toursRes] = await Promise.all([
         fetchBlocks(token),
-        fetch(`${API}/api/rooms`, { headers: { Authorization: `Bearer ${token}` } }),
-        fetch(`${API}/api/tours`, { headers: { Authorization: `Bearer ${token}` } }),
+        fetch(`${API}/api/rooms/admin/list`, { headers: { Authorization: `Bearer ${token}` } }),
+        fetch(`${API}/api/tours/admin/list`, { headers: { Authorization: `Bearer ${token}` } }),
       ]);
       setBlocks(blocksData);
       if (roomsRes.ok) setRooms(await roomsRes.json());

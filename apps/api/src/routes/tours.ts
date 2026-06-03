@@ -1,15 +1,24 @@
 import { Router } from "express";
 import multer from "multer";
-import { prisma } from "@jongjongdi/database";
+import { prisma, Prisma } from "@jongjongdi/database";
 import { requireOperator } from "../middleware/operatorAuth";
 import { uploadImageToStorage, deleteFromStorage, pathFromPublicUrl } from "../lib/upload";
 
 const router = Router();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 8 * 1024 * 1024 } });
 
-// GET /api/tours/admin/list  — all tours (admin)
-router.get("/admin/list", requireOperator, async (_req, res) => {
+// Parse a YYYY-MM-DD query value into a Date (UTC midnight), or null if invalid
+function parseDate(value: unknown): Date | null {
+  if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return null;
+  const d = new Date(`${value}T00:00:00.000Z`);
+  return isNaN(d.getTime()) ? null : d;
+}
+
+// GET /api/tours/admin/list  — operator: เฉพาะของตัวเอง · super admin: ทั้งหมด
+router.get("/admin/list", requireOperator, async (req, res) => {
+  const where = req.operator!.role === "SUPER_ADMIN" ? {} : { operatorId: req.operator!.id };
   const tours = await prisma.tour.findMany({
+    where,
     include: {
       images: { where: { isMain: true } },
       _count: { select: { schedules: true } },
@@ -19,10 +28,31 @@ router.get("/admin/list", requireOperator, async (_req, res) => {
   res.json(tours);
 });
 
-// GET /api/tours
-router.get("/", async (_req, res) => {
+// GET /api/tours?q=&date=YYYY-MM-DD
+router.get("/", async (req, res) => {
+  const q = typeof req.query.q === "string" ? req.query.q.trim() : "";
+
+  const where: Prisma.TourWhereInput = { isActive: true };
+  if (q) {
+    where.OR = [
+      { nameTh: { contains: q, mode: "insensitive" } },
+      { nameEn: { contains: q, mode: "insensitive" } },
+      { descriptionTh: { contains: q, mode: "insensitive" } },
+      { descriptionEn: { contains: q, mode: "insensitive" } },
+    ];
+  }
+
+  // Only tours with a departure on the chosen date that still has seats
+  const date = parseDate(req.query.date);
+  if (date) {
+    const next = new Date(date.getTime() + 24 * 60 * 60 * 1000);
+    where.schedules = {
+      some: { departureDate: { gte: date, lt: next }, availableSeats: { gt: 0 } },
+    };
+  }
+
   const tours = await prisma.tour.findMany({
-    where: { isActive: true },
+    where,
     include: { images: { where: { isMain: true } } },
     orderBy: { pricePerPerson: "asc" },
   });

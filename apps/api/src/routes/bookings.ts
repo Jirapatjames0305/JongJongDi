@@ -21,6 +21,11 @@ router.get("/admin/list", requireOperator, async (req, res) => {
   const where: Record<string, unknown> = {};
   if (status) where.status = status;
   if (type) where.type = type;
+  // Operators see only their own bookings; super admin sees all
+  if (req.operator!.role !== "SUPER_ADMIN") {
+    const operatorId = req.operator!.id;
+    where.OR = [{ room: { operatorId } }, { tourSchedule: { tour: { operatorId } } }];
+  }
 
   const [bookings, total] = await Promise.all([
     prisma.booking.findMany({

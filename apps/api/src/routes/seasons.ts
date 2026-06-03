@@ -4,9 +4,14 @@ import { requireOperator } from "../middleware/operatorAuth";
 
 const router = Router();
 
-// GET /api/seasons
-router.get("/", requireOperator, async (_req, res) => {
+// GET /api/seasons — operator: เฉพาะของตัวเอง · super admin: ทั้งหมด
+router.get("/", requireOperator, async (req, res) => {
+  const operatorId = req.operator!.id;
+  const where = req.operator!.role === "SUPER_ADMIN"
+    ? {}
+    : { OR: [{ room: { operatorId } }, { tour: { operatorId } }] };
   const seasons = await prisma.seasonPrice.findMany({
+    where,
     include: {
       room: { select: { nameTh: true } },
       tour: { select: { nameTh: true } },

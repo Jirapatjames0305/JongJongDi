@@ -18,6 +18,14 @@ interface Payment {
   failureMessage: string | null;
 }
 
+interface BankAccount {
+  id: string;
+  bankName: string;
+  accountName: string;
+  accountNumber: string;
+  branch: string | null;
+}
+
 interface Review {
   id: string;
   rating: number;
@@ -206,6 +214,16 @@ function BankTransferSection({ bookingNumber, payment, onReload }: { bookingNumb
   const [file, setFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
   const [err, setErr] = useState("");
+  const [accounts, setAccounts] = useState<BankAccount[]>([]);
+  const [accountsLoading, setAccountsLoading] = useState(true);
+
+  useEffect(() => {
+    fetch(`${API}/api/bank-accounts`)
+      .then((r) => (r.ok ? r.json() : []))
+      .then((data) => setAccounts(Array.isArray(data) ? data : []))
+      .catch(() => setAccounts([]))
+      .finally(() => setAccountsLoading(false));
+  }, []);
 
   async function handleUpload() {
     if (!file) return;
@@ -241,12 +259,38 @@ function BankTransferSection({ bookingNumber, payment, onReload }: { bookingNumb
   return (
     <div className="bg-white rounded-2xl border border-slate-200 p-5">
       <h3 className="font-bold text-slate-800 mb-3"><i className="fa-solid fa-building-columns text-[#2563eb] mr-2"></i>โอนผ่านธนาคาร</h3>
-      <div className="bg-slate-50 rounded-xl p-4 mb-4 text-sm space-y-1">
-        <div className="flex justify-between"><span className="text-slate-500">ธนาคาร</span><span className="font-medium">กสิกรไทย</span></div>
-        <div className="flex justify-between"><span className="text-slate-500">เลขที่บัญชี</span><span className="font-mono font-medium">123-4-56789-0</span></div>
-        <div className="flex justify-between"><span className="text-slate-500">ชื่อบัญชี</span><span className="font-medium">JongJongDi Co.</span></div>
-        <div className="flex justify-between pt-2 border-t border-slate-200 mt-2"><span className="text-slate-500">ยอดที่ต้องโอน</span><span className="font-bold text-[#2563eb]">฿{payment.amount.toLocaleString()}</span></div>
-      </div>
+      {accountsLoading ? (
+        <div className="bg-slate-50 rounded-xl p-4 mb-4 text-center text-slate-400 text-sm">
+          <i className="fa-solid fa-circle-notch fa-spin mr-2"></i>กำลังโหลดบัญชี...
+        </div>
+      ) : accounts.length === 0 ? (
+        <div className="bg-amber-50 text-amber-700 rounded-xl p-4 mb-4 text-sm">
+          <i className="fa-solid fa-triangle-exclamation mr-2"></i>ยังไม่มีบัญชีรับโอน กรุณาติดต่อเจ้าหน้าที่
+        </div>
+      ) : (
+        <div className="space-y-3 mb-4">
+          {accounts.map((a) => (
+            <div key={a.id} className="bg-slate-50 rounded-xl p-4 text-sm space-y-1">
+              <div className="flex justify-between"><span className="text-slate-500">ธนาคาร</span><span className="font-medium">{a.bankName}{a.branch && ` · ${a.branch}`}</span></div>
+              <div className="flex items-center justify-between">
+                <span className="text-slate-500">เลขที่บัญชี</span>
+                <span className="flex items-center gap-2">
+                  <span className="font-mono font-medium">{a.accountNumber}</span>
+                  <button type="button" onClick={() => navigator.clipboard?.writeText(a.accountNumber.replace(/\D/g, ""))}
+                    className="text-[#2563eb] hover:text-blue-700" title="คัดลอกเลขบัญชี">
+                    <i className="fa-regular fa-copy"></i>
+                  </button>
+                </span>
+              </div>
+              <div className="flex justify-between"><span className="text-slate-500">ชื่อบัญชี</span><span className="font-medium">{a.accountName}</span></div>
+            </div>
+          ))}
+          <div className="flex justify-between px-4 text-sm">
+            <span className="text-slate-500">ยอดที่ต้องโอน</span>
+            <span className="font-bold text-[#2563eb]">฿{payment.amount.toLocaleString()}</span>
+          </div>
+        </div>
+      )}
       <label className="block">
         <span className="block text-xs font-medium text-slate-500 mb-2">อัพโหลดสลิปการโอน</span>
         <input type="file" accept="image/*" onChange={(e) => setFile(e.target.files?.[0] ?? null)}

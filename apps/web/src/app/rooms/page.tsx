@@ -5,8 +5,21 @@ import { listRooms } from "@/lib/api";
 
 export const metadata = { title: "จองที่พัก | JongJongDi" };
 
-export default async function RoomsPage() {
-  const rooms = await listRooms();
+const fmtDate = (s: string) =>
+  new Date(s).toLocaleDateString("th-TH", { day: "numeric", month: "short" });
+
+export default async function RoomsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ q?: string; checkIn?: string; checkOut?: string }>;
+}) {
+  const sp = await searchParams;
+  const q = sp.q?.trim() || undefined;
+  const checkIn = sp.checkIn || undefined;
+  const checkOut = sp.checkOut || undefined;
+  const hasFilter = Boolean(q || (checkIn && checkOut));
+
+  const rooms = await listRooms({ q, checkIn, checkOut });
 
   return (
     <>
@@ -22,6 +35,25 @@ export default async function RoomsPage() {
             <p className="text-slate-500 mt-2 text-sm md:text-base">
               เลือกห้องพักที่ใช่สำหรับคุณ พร้อมวิวทะเลอันดามัน
             </p>
+
+            {/* Active filters */}
+            {hasFilter && (
+              <div className="mt-4 flex flex-wrap items-center gap-2">
+                {q && (
+                  <span className="inline-flex items-center gap-1.5 bg-blue-50 text-[#2563eb] text-xs font-medium px-3 py-1.5 rounded-full">
+                    <i className="fa-solid fa-magnifying-glass"></i>{q}
+                  </span>
+                )}
+                {checkIn && checkOut && (
+                  <span className="inline-flex items-center gap-1.5 bg-blue-50 text-[#2563eb] text-xs font-medium px-3 py-1.5 rounded-full">
+                    <i className="fa-solid fa-calendar-days"></i>{fmtDate(checkIn)} – {fmtDate(checkOut)}
+                  </span>
+                )}
+                <a href="/rooms" className="text-xs text-slate-400 hover:text-slate-600 underline ml-1">
+                  ล้างตัวกรอง
+                </a>
+              </div>
+            )}
           </div>
         </div>
 
@@ -30,12 +62,12 @@ export default async function RoomsPage() {
           {rooms.length === 0 ? (
             <div className="text-center py-16 text-slate-400">
               <i className="fa-solid fa-bed text-5xl mb-3 block opacity-40"></i>
-              <p>ยังไม่มีห้องพัก</p>
+              <p>{hasFilter ? "ไม่พบห้องพักที่ตรงกับเงื่อนไข ลองปรับวันที่หรือคำค้นหา" : "ยังไม่มีห้องพัก"}</p>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
               {rooms.map((room) => (
-                <RoomCard key={room.id} room={room} />
+                <RoomCard key={room.id} room={room} checkIn={checkIn} checkOut={checkOut} />
               ))}
             </div>
           )}

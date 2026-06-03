@@ -4,16 +4,17 @@ import Link from "next/link";
 import { useLang, pick } from "@/lib/lang";
 import { type Tour, mainImageUrl } from "@/lib/api";
 
-export default function TourCard({ tour }: { tour: Tour }) {
+export default function TourCard({ tour, date }: { tour: Tour; date?: string }) {
   const [lang] = useLang();
   const name = pick(tour.nameTh, tour.nameEn, lang);
   const desc = pick(tour.descriptionTh, tour.descriptionEn, lang);
   const img = mainImageUrl(tour.images);
   const nextSchedule = tour.schedules?.[0];
+  const href = `/tours/${tour.slug}${date ? `?date=${date}` : ""}`;
 
   return (
     <Link
-      href={`/tours/${tour.slug}`}
+      href={href}
       className="bg-white rounded-2xl overflow-hidden shadow-sm border border-slate-100 hover:shadow-lg transition-shadow duration-300 group block"
     >
       <div className="h-52 bg-gradient-to-br from-cyan-100 to-blue-300 relative overflow-hidden">

@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import AdminShell from "@/components/AdminShell";
-import { fetchOperators, approveOperator } from "@/lib/auth";
+import { fetchOperators, approveOperator, updateOperatorCommission, type OperatorInfo } from "@/lib/auth";
 
 interface Operator {
   id: string;
@@ -12,6 +13,7 @@ interface Operator {
   phone: string;
   role: string;
   status: "PENDING" | "ACTIVE" | "SUSPENDED";
+  commissionRate: number;
   createdAt: string;
   _count: { rooms: number; tours: number };
 }
@@ -28,9 +30,39 @@ const statusLabel: Record<string, string> = {
 };
 
 export default function OperatorsPage() {
+  const router = useRouter();
   const [operators, setOperators] = useState<Operator[]>([]);
   const [filter, setFilter] = useState("all");
   const [loading, setLoading] = useState(true);
+  const [commissionDraft, setCommissionDraft] = useState<Record<string, string>>({});
+  const [savingId, setSavingId] = useState<string | null>(null);
+
+  // Page-level guard: super admin only
+  useEffect(() => {
+    const stored = localStorage.getItem("jjd_operator");
+    if (stored) {
+      const op = JSON.parse(stored) as OperatorInfo;
+      if (op.role !== "SUPER_ADMIN") router.replace("/dashboard");
+    }
+  }, [router]);
+
+  async function saveCommission(id: string) {
+    const raw = commissionDraft[id];
+    if (raw === undefined) return;
+    const val = Number(raw);
+    if (isNaN(val) || val < 0 || val > 100) return;
+    setSavingId(id);
+    try {
+      const token = localStorage.getItem("jjd_token") ?? "";
+      await updateOperatorCommission(token, id, val);
+      setOperators((prev) => prev.map((o) => (o.id === id ? { ...o, commissionRate: val } : o)));
+      setCommissionDraft((d) => { const n = { ...d }; delete n[id]; return n; });
+    } catch {
+      // keep draft on error
+    } finally {
+      setSavingId(null);
+    }
+  }
 
   async function load() {
     setLoading(true);
@@ -100,7 +132,7 @@ export default function OperatorsPage() {
             <table className="w-full text-sm">
               <thead className="bg-slate-50 text-xs text-slate-500 uppercase tracking-wider">
                 <tr>
-                  {["ชื่อ / ธุรกิจ", "ติดต่อ", "สถานะ", "ที่พัก/ทัวร์", "วันที่สมัคร", "การดำเนินการ"].map((h) => (
+                  {["ชื่อ / ธุรกิจ", "ติดต่อ", "สถานะ", "ค่าคอม (%)", "ที่พัก/ทัวร์", "วันที่สมัคร", "การดำเนินการ"].map((h) => (
                     <th key={h} className="px-5 py-3 text-left font-medium">{h}</th>
                   ))}
                 </tr>
@@ -120,6 +152,22 @@ export default function OperatorsPage() {
                       <span className={`px-2 py-1 rounded-full text-xs font-medium ${statusStyle[op.status]}`}>
                         {statusLabel[op.status]}
                       </span>
+                    </td>
+                    <td className="px-5 py-4">
+                      <div className="flex items-center gap-1.5">
+                        <input
+                          type="number" min="0" max="100" step="0.5"
+                          value={commissionDraft[op.id] ?? String(op.commissionRate)}
+                          onChange={(e) => setCommissionDraft((d) => ({ ...d, [op.id]: e.target.value }))}
+                          className="w-16 border border-slate-200 rounded-lg px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30"
+                        />
+                        {commissionDraft[op.id] !== undefined && commissionDraft[op.id] !== String(op.commissionRate) && (
+                          <button onClick={() => saveCommission(op.id)} disabled={savingId === op.id}
+                            className="px-2 py-1 bg-[#2563eb] text-white rounded-lg text-xs font-semibold hover:bg-blue-700 transition disabled:opacity-50">
+                            {savingId === op.id ? <i className="fa-solid fa-circle-notch fa-spin"></i> : "บันทึก"}
+                          </button>
+                        )}
+                      </div>
                     </td>
                     <td className="px-5 py-4 text-slate-500 text-xs">
                       <span className="mr-3"><i className="fa-solid fa-bed mr-1"></i>{op._count.rooms}</span>

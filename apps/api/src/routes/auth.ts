@@ -7,11 +7,12 @@ import { requireOperator } from "../middleware/operatorAuth";
 
 const router = Router();
 
-const JWT_SECRET = process.env.JWT_SECRET ?? "dev-secret";
 const JWT_EXPIRES = "7d";
 
 function signToken(payload: { id: string; email: string; role: string }) {
-  return jwt.sign(payload, JWT_SECRET, { expiresIn: JWT_EXPIRES });
+  // Read env lazily (not at import time) — dotenv loads .env after this module is imported,
+  // so a top-level const would capture undefined → "dev-secret" and mismatch requireOperator.
+  return jwt.sign(payload, process.env.JWT_SECRET ?? "dev-secret", { expiresIn: JWT_EXPIRES });
 }
 
 // POST /api/auth/register — ผู้ประกอบการสมัคร
@@ -36,20 +37,31 @@ router.post("/register", async (req, res) => {
     return;
   }
 
-  const passwordHash = await bcrypt.hash(parsed.data.password, 10);
+  const { password, ...rest } = parsed.data;
+  const passwordHash = await bcrypt.hash(password, 10);
   const operator = await prisma.operator.create({
     data: {
-      ...parsed.data,
+      ...rest,
       passwordHash,
       status: "PENDING",
       role: "OPERATOR",
     },
-    select: { id: true, email: true, name: true, businessName: true, status: true, createdAt: true },
+    select: { id: true, email: true, name: true, businessName: true, status: true, role: true, createdAt: true },
   });
 
+  // Auto-login: issue a token so the new operator goes straight into the panel
+  const token = signToken({ id: operator.id, email: operator.email, role: operator.role });
   res.status(201).json({
-    operator,
-    message: "สมัครสำเร็จ! รอการอนุมัติจาก Admin ก่อนเข้าใช้งาน",
+    token,
+    operator: {
+      id: operator.id,
+      email: operator.email,
+      name: operator.name,
+      businessName: operator.businessName,
+      role: operator.role,
+      status: operator.status,
+    },
+    message: "สมัครสำเร็จ! รอการอนุมัติจาก Admin ก่อนเข้าใช้งานเต็มรูปแบบ",
   });
 });
 
@@ -78,10 +90,7 @@ router.post("/login", async (req, res) => {
     return;
   }
 
-  if (operator.status === "PENDING") {
-    res.status(403).json({ error: "บัญชีของคุณรอการอนุมัติจาก Admin" });
-    return;
-  }
+  // PENDING operators may sign in to see limited menus; only SUSPENDED is blocked.
   if (operator.status === "SUSPENDED") {
     res.status(403).json({ error: "บัญชีของคุณถูกระงับการใช้งาน" });
     return;
@@ -96,6 +105,7 @@ router.post("/login", async (req, res) => {
       name: operator.name,
       businessName: operator.businessName,
       role: operator.role,
+      status: operator.status,
     },
   });
 });

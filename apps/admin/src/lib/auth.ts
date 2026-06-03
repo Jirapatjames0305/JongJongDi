@@ -6,6 +6,7 @@ export interface OperatorInfo {
   name: string;
   businessName: string;
   role: "SUPER_ADMIN" | "OPERATOR";
+  status?: "PENDING" | "ACTIVE" | "SUSPENDED";
 }
 
 export async function loginApi(email: string, password: string) {
@@ -32,8 +33,8 @@ export async function registerApi(payload: {
     body: JSON.stringify(payload),
   });
   const data = await res.json();
-  if (!res.ok) throw new Error(data.error ?? "สมัครไม่สำเร็จ");
-  return data;
+  if (!res.ok) throw new Error(typeof data.error === "string" ? data.error : "สมัครไม่สำเร็จ");
+  return data as { token: string; operator: OperatorInfo; message: string };
 }
 
 export async function fetchOperators(token: string, status?: string) {
@@ -49,6 +50,17 @@ export async function approveOperator(token: string, id: string, status: string)
     body: JSON.stringify({ status }),
   });
   return res.json();
+}
+
+export async function updateOperatorCommission(token: string, id: string, commissionRate: number) {
+  const res = await fetch(`${API}/api/operators/${id}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ commissionRate }),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error ?? "บันทึกค่าคอมไม่สำเร็จ");
+  return data;
 }
 
 export async function fetchStats(token: string) {

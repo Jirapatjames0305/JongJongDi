@@ -1,145 +1,111 @@
-export default function TrendingSection() {
+import { listTrending, type TrendingCard } from "@/lib/api";
+import { TrendingSectionHeader } from "./TrendingSectionHeader";
+
+const fmt = (n: number) => n.toLocaleString("en-US");
+
+function CardImage({ card }: { card: TrendingCard }) {
+  if (card.imageUrl) {
+    return (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img src={card.imageUrl} alt={card.title} className="w-full h-full object-cover" />
+    );
+  }
+  const fallback =
+    card.kind === "PRODUCT"
+      ? { grad: "from-yellow-300 via-amber-400 to-orange-500", icon: "fa-seedling" }
+      : card.kind === "TOUR"
+      ? { grad: "from-cyan-400 via-teal-500 to-blue-700",       icon: "fa-water-ladder" }
+      : { grad: "from-cyan-400 via-blue-500 to-blue-700",       icon: "fa-mountain-sun" };
   return (
-    <section className="py-8 md:py-10 bg-white border-b border-slate-100">
+    <div className={`w-full h-full bg-gradient-to-br ${fallback.grad} flex items-center justify-center`}>
+      <i className={`fa-solid ${fallback.icon} text-white/40 text-6xl`}></i>
+    </div>
+  );
+}
+
+export default async function TrendingSection() {
+  const cards = await listTrending();
+  if (cards.length === 0) return null;
+
+  return (
+    <section id="promotions" className="py-10 md:py-16 bg-slate-50 border-y border-slate-100">
       <div className="container mx-auto px-4 md:px-6">
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h2 className="text-xl md:text-3xl font-bold text-slate-800 flex items-center gap-2">
-              <i className="fa-solid fa-fire text-red-500 animate-pulse"></i>{" "}
-              ฮิตติดกระแส
-            </h2>
-            <p className="text-slate-500 text-xs md:text-sm mt-1">
-              สินค้าและโปรโมชั่นมาแรง ห้ามพลาด!
-            </p>
-          </div>
-          <a
-            href="#"
-            className="text-[#2563eb] hover:text-blue-700 text-sm font-semibold whitespace-nowrap bg-blue-50 px-3 py-1 rounded-full transition"
-          >
-            ดูทั้งหมด <i className="fa-solid fa-arrow-right ml-1"></i>
-          </a>
+        <div className="flex items-center justify-between mb-6 md:mb-10">
+          <TrendingSectionHeader />
         </div>
 
-        <div className="flex overflow-x-auto pb-8 gap-4 px-4 -mx-4 md:grid md:grid-cols-3 md:gap-8 md:overflow-visible md:mx-0 md:px-0 scrollbar-hide snap-x snap-mandatory">
-          {/* Card 1: Durian */}
-          <div className="min-w-[85vw] sm:min-w-[300px] md:min-w-0 md:w-auto bg-white rounded-xl shadow-md md:shadow-lg shadow-slate-200 overflow-hidden group cursor-pointer border border-slate-100 relative card-hover snap-center">
-            <div className="absolute top-3 right-3 bg-red-600 text-white text-[10px] md:text-xs font-bold px-2.5 py-1 rounded-full z-10 shadow-sm uppercase tracking-wide">
-              <i className="fa-solid fa-star text-yellow-300 mr-1"></i> Best
-              Seller
-            </div>
-            <div className="h-40 md:h-48 bg-slate-200 relative overflow-hidden">
-              <div className="w-full h-full bg-gradient-to-br from-yellow-100 to-yellow-200 flex items-center justify-center">
-                <i className="fa-solid fa-seedling text-yellow-600 text-5xl opacity-40"></i>
-              </div>
-            </div>
-            <div className="p-4">
-              <div className="flex items-center gap-1 text-[10px] md:text-xs text-slate-500 mb-2">
-                <span className="bg-slate-100 px-2 py-0.5 rounded text-slate-600">
-                  <i className="fa-solid fa-location-dot text-red-500 mr-1"></i>{" "}
-                  จันทบุรี
-                </span>
-                <span className="text-green-600 font-medium ml-auto">
-                  <i className="fa-solid fa-truck-fast"></i> พร้อมส่งทั่วไทย
-                </span>
-              </div>
-              <h3 className="font-bold text-base md:text-lg mb-1 text-slate-800 group-hover:text-[#2563eb] transition line-clamp-1">
-                ทุเรียนทอดพรีเมียม โซเดียมต่ำ
-              </h3>
-              <p className="text-xs md:text-sm text-slate-500 mb-3 line-clamp-2 leading-relaxed">
-                กรอบ อร่อย เคี้ยวเพลิน จากสวนวัฒนาการ์เด้นวิว (Wattana Garden
-                View)
-              </p>
-              <div className="flex justify-between items-end border-t border-slate-100 pt-3">
-                <div>
-                  <span className="text-xs text-slate-400 line-through block">
-                    180.-
-                  </span>
-                  <div className="text-[#f59e0b] font-bold text-lg md:text-xl leading-none">
-                    150.-{" "}
-                    <span className="text-xs text-slate-500 font-normal">
-                      /ถุง
-                    </span>
-                  </div>
-                </div>
-                <button className="bg-[#2563eb] text-white px-4 py-1.5 md:py-2 rounded-lg text-xs md:text-sm font-semibold hover:bg-blue-700 transition shadow-md shadow-blue-500/20 active:scale-95">
-                  สั่งซื้อเลย
-                </button>
-              </div>
-            </div>
-          </div>
+        {/* Promo banner grid */}
+        <div className="flex overflow-x-auto pb-4 gap-4 -mx-4 px-4 md:mx-0 md:px-0 scrollbar-hide snap-x snap-mandatory md:grid md:grid-cols-2 lg:grid-cols-4 md:overflow-visible md:pb-0">
+          {cards.map((card) => {
+            const isProduct = card.kind === "PRODUCT";
+            return (
+              <a
+                key={card.id}
+                href={card.link}
+                className="min-w-[75vw] sm:min-w-[300px] md:min-w-0 snap-center block relative rounded-2xl overflow-hidden group shadow-md hover:shadow-xl transition-shadow duration-300 active:scale-[0.98]"
+              >
+                {/* Image / gradient fill */}
+                <div className="h-52 md:h-60 relative">
+                  <CardImage card={card} />
 
-          {/* Card 2: Nature Camp */}
-          <div className="min-w-[85vw] sm:min-w-[300px] md:min-w-0 md:w-auto bg-white rounded-xl shadow-md md:shadow-lg shadow-slate-200 overflow-hidden group cursor-pointer border border-slate-100 relative card-hover snap-center">
-            <div className="h-40 md:h-48 bg-slate-200 relative overflow-hidden">
-              <div className="w-full h-full bg-gradient-to-br from-green-100 to-green-200 flex items-center justify-center">
-                <i className="fa-solid fa-mountain-sun text-green-600 text-5xl opacity-40"></i>
-              </div>
-            </div>
-            <div className="p-4">
-              <div className="flex items-center gap-1 text-[10px] md:text-xs text-slate-500 mb-2">
-                <span className="bg-slate-100 px-2 py-0.5 rounded text-slate-600">
-                  <i className="fa-solid fa-tree text-green-500 mr-1"></i>{" "}
-                  อุทยานแห่งชาติ เขาสิบห้าชั้น
-                </span>
-                <span className="ml-auto text-slate-400">จันทบุรี</span>
-              </div>
-              <h3 className="font-bold text-base md:text-lg mb-1 text-slate-800 group-hover:text-[#2563eb] transition line-clamp-1">
-                "หนาวนี้…หนีเมือง ขึ้นเขา นอนดูดาว"
-              </h3>
-              <p className="text-xs md:text-sm text-slate-500 mb-3 line-clamp-1">
-                โทนอบอุ่น–ธรรมชาติ–slow life
-              </p>
-              <p className="text-xs md:text-sm text-slate-500 mb-3 line-clamp-1">
-                ⛺️ค่ากางเต็นท์ คนละ 30 บาท ค่าเข้าอุทยาน คนละ 20 บาท
-              </p>
-              <div className="flex justify-between items-end border-t border-slate-100 pt-3">
-                <div>
-                  <div className="text-[#f59e0b] font-bold text-lg md:text-xl leading-none">
-                    20.-
-                  </div>
-                </div>
-                <button className="bg-white text-[#2563eb] border border-[#2563eb] px-4 py-1.5 md:py-2 rounded-lg text-xs md:text-sm font-semibold hover:bg-blue-50 transition active:scale-95">
-                  ดูรายละเอียด
-                </button>
-              </div>
-            </div>
-          </div>
+                  {/* Gradient overlay for text */}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
 
-          {/* Card 3: Glamping */}
-          <div className="min-w-[85vw] sm:min-w-[300px] md:min-w-0 md:w-auto bg-white rounded-xl shadow-md md:shadow-lg shadow-slate-200 overflow-hidden group cursor-pointer border border-slate-100 relative card-hover snap-center">
-            <div className="h-40 md:h-48 bg-slate-200 relative overflow-hidden">
-              <div className="w-full h-full bg-gradient-to-br from-blue-100 to-indigo-200 flex items-center justify-center">
-                <i className="fa-solid fa-tent text-indigo-600 text-5xl opacity-40"></i>
-              </div>
-            </div>
-            <div className="p-4">
-              <div className="flex items-center gap-1 text-[10px] md:text-xs text-slate-500 mb-2">
-                <span className="bg-slate-100 px-2 py-0.5 rounded text-slate-600">
-                  <i className="fa-solid fa-tree text-green-500 mr-1"></i>{" "}
-                  เขาใหญ่
-                </span>
-              </div>
-              <h3 className="font-bold text-base md:text-lg mb-1 text-slate-800 group-hover:text-[#2563eb] transition line-clamp-1">
-                Glamping Sky Camp รับลมหนาว
-              </h3>
-              <p className="text-xs md:text-sm text-slate-500 mb-3 line-clamp-1">
-                ที่พักเต็นท์หรู ชมดาว สัมผัสหมอก
-              </p>
-              <div className="flex justify-between items-end border-t border-slate-100 pt-3">
-                <div>
-                  <span className="text-xs text-slate-400 line-through block">
-                    3,500.-
-                  </span>
-                  <div className="text-[#f59e0b] font-bold text-lg md:text-xl leading-none">
-                    2,200.-
+                  {/* Badge top-right */}
+                  {card.badge && (
+                    <div className="absolute top-3 left-3 bg-red-500 text-white text-[10px] font-bold px-2.5 py-1 rounded-full shadow-sm uppercase tracking-wide">
+                      <i className="fa-solid fa-star text-yellow-300 mr-1"></i>{card.badge}
+                    </div>
+                  )}
+
+                  {/* Content bottom overlay */}
+                  <div className="absolute bottom-0 left-0 right-0 p-4">
+                    {(card.location || card.deliveryNote) && (
+                      <div className="flex items-center gap-2 mb-2 text-[11px]">
+                        {card.location && (
+                          <span className="bg-white/20 backdrop-blur-sm text-white px-2 py-0.5 rounded-full">
+                            <i className="fa-solid fa-location-dot text-red-400 mr-1"></i>{card.location}
+                          </span>
+                        )}
+                        {card.deliveryNote && (
+                          <span className="text-green-300 font-medium">
+                            <i className="fa-solid fa-truck-fast mr-1"></i>{card.deliveryNote}
+                          </span>
+                        )}
+                      </div>
+                    )}
+                    <h3 className="font-bold text-white text-base leading-snug line-clamp-2 mb-2 group-hover:text-yellow-300 transition-colors">
+                      {card.title}
+                    </h3>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        {card.oldPrice && (
+                          <span className="text-white/50 text-xs line-through block leading-none">
+                            {fmt(card.oldPrice)}.-
+                          </span>
+                        )}
+                        <span className="text-[#f59e0b] font-bold text-xl leading-none">
+                          {fmt(card.price)}.-{" "}
+                          {card.unitLabel && (
+                            <span className="text-xs text-white/60 font-normal">{card.unitLabel}</span>
+                          )}
+                        </span>
+                      </div>
+                      <span
+                        className={
+                          isProduct
+                            ? "bg-[#2563eb] text-white px-4 py-1.5 rounded-xl text-xs font-semibold shadow-md active:scale-95 transition"
+                            : "bg-white text-[#2563eb] px-4 py-1.5 rounded-xl text-xs font-semibold shadow-md active:scale-95 transition"
+                        }
+                      >
+                        {card.ctaLabel}
+                      </span>
+                    </div>
                   </div>
                 </div>
-                <button className="bg-white text-[#2563eb] border border-[#2563eb] px-4 py-1.5 md:py-2 rounded-lg text-xs md:text-sm font-semibold hover:bg-blue-50 transition active:scale-95">
-                  ดูห้องพัก
-                </button>
-              </div>
-            </div>
-          </div>
+              </a>
+            );
+          })}
         </div>
       </div>
     </section>

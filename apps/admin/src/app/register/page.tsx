@@ -2,9 +2,11 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { registerApi } from "@/lib/auth";
 
 export default function RegisterPage() {
+  const router = useRouter();
   const [form, setForm] = useState({
     name: "",
     businessName: "",
@@ -15,7 +17,6 @@ export default function RegisterPage() {
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [success, setSuccess] = useState(false);
 
   function update(field: string, value: string) {
     setForm((f) => ({ ...f, [field]: value }));
@@ -30,43 +31,21 @@ export default function RegisterPage() {
     }
     setLoading(true);
     try {
-      await registerApi({
+      const { token, operator } = await registerApi({
         email: form.email,
         password: form.password,
         name: form.name,
         businessName: form.businessName,
         phone: form.phone,
       });
-      setSuccess(true);
+      // Auto-login: store session and go straight into the panel
+      localStorage.setItem("jjd_token", token);
+      localStorage.setItem("jjd_operator", JSON.stringify(operator));
+      router.push("/dashboard");
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "เกิดข้อผิดพลาด");
-    } finally {
       setLoading(false);
     }
-  }
-
-  if (success) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-slate-50 flex items-center justify-center px-4">
-        <div className="w-full max-w-md text-center">
-          <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <i className="fa-solid fa-check text-green-500 text-3xl"></i>
-          </div>
-          <h1 className="text-2xl font-bold text-slate-800 mb-2">สมัครสำเร็จ!</h1>
-          <p className="text-slate-500 mb-6">
-            ระบบรับคำขอของคุณแล้ว
-            <br />
-            กรุณารอ Admin อนุมัติก่อนเข้าใช้งาน (1-2 วันทำการ)
-          </p>
-          <Link
-            href="/login"
-            className="inline-block px-8 py-3 bg-[#2563eb] text-white rounded-xl font-semibold hover:bg-blue-700 transition"
-          >
-            กลับหน้าเข้าสู่ระบบ
-          </Link>
-        </div>
-      </div>
-    );
   }
 
   const fields = [

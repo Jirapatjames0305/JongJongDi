@@ -5,14 +5,21 @@ import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
 import { OperatorInfo } from "@/lib/auth";
 
-const navItems = [
+// requiresActive: เมนูจัดการที่เปิดให้ใช้เมื่อ operator ได้รับอนุมัติ (ACTIVE) แล้วเท่านั้น
+const navItems: { href: string; icon: string; label: string; superAdminOnly?: boolean; requiresActive?: boolean }[] = [
   { href: "/dashboard", icon: "fa-gauge", label: "Dashboard" },
   { href: "/operators", icon: "fa-users", label: "ผู้ประกอบการ", superAdminOnly: true },
-  { href: "/rooms", icon: "fa-bed", label: "ที่พัก" },
-  { href: "/tours", icon: "fa-water-ladder", label: "ทัวร์" },
-  { href: "/bookings", icon: "fa-calendar-check", label: "การจอง" },
-  { href: "/availability", icon: "fa-ban", label: "วันว่าง/ปิด" },
-  { href: "/seasons", icon: "fa-tag", label: "ราคา High Season" },
+  { href: "/rooms", icon: "fa-bed", label: "ที่พัก", requiresActive: true },
+  { href: "/tours", icon: "fa-water-ladder", label: "ทัวร์", requiresActive: true },
+  { href: "/products", icon: "fa-bag-shopping", label: "สินค้า", superAdminOnly: true },
+  { href: "/trending", icon: "fa-fire", label: "ฮิตติดกระแส", superAdminOnly: true },
+  { href: "/coupons", icon: "fa-ticket", label: "คูปอง", superAdminOnly: true },
+  { href: "/bookings", icon: "fa-calendar-check", label: "การจอง", requiresActive: true },
+  { href: "/revenue", icon: "fa-coins", label: "รายได้", requiresActive: true },
+  { href: "/availability", icon: "fa-ban", label: "วันว่าง/ปิด", requiresActive: true },
+  { href: "/seasons", icon: "fa-tag", label: "ราคา High Season", requiresActive: true },
+  { href: "/bank-accounts", icon: "fa-building-columns", label: "บัญชีธนาคาร", superAdminOnly: true },
+  { href: "/payouts", icon: "fa-file-invoice-dollar", label: "ยอดโอน/ใบสรุป", superAdminOnly: true },
   { href: "/settings", icon: "fa-gear", label: "ตั้งค่า" },
 ];
 
@@ -40,9 +47,14 @@ export default function AdminShell({ children }: { children: ReactNode }) {
 
   if (!operator) return null;
 
-  const visibleNav = navItems.filter(
-    (n) => !n.superAdminOnly || operator.role === "SUPER_ADMIN"
-  );
+  const isSuperAdmin = operator.role === "SUPER_ADMIN";
+  // status may be absent on older sessions → treat as active (don't restrict)
+  const isPending = operator.status === "PENDING" && !isSuperAdmin;
+  const visibleNav = navItems.filter((n) => {
+    if (n.superAdminOnly && !isSuperAdmin) return false;
+    if (n.requiresActive && isPending) return false;
+    return true;
+  });
 
   const Sidebar = () => (
     <aside className="flex flex-col h-full bg-[#0f172a] text-white w-64">
@@ -140,6 +152,15 @@ export default function AdminShell({ children }: { children: ReactNode }) {
 
         {/* Content */}
         <main className="flex-1 overflow-y-auto bg-slate-50 p-5 md:p-8">
+          {isPending && (
+            <div className="mb-5 flex items-start gap-3 bg-amber-50 border border-amber-200 text-amber-800 rounded-xl px-4 py-3 text-sm">
+              <i className="fa-solid fa-clock mt-0.5"></i>
+              <div>
+                <div className="font-semibold">บัญชีของคุณอยู่ระหว่างรอ Admin อนุมัติ</div>
+                <div className="text-amber-700/90 text-xs mt-0.5">เมนูจัดการ (ที่พัก ทัวร์ สินค้า การจอง ฯลฯ) จะเปิดให้ใช้งานหลังได้รับการอนุมัติ</div>
+              </div>
+            </div>
+          )}
           {children}
         </main>
       </div>

@@ -1,22 +1,27 @@
 "use client";
 
 import { use, useEffect, useState } from "react";
-import { notFound } from "next/navigation";
+import { notFound, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import AvailabilityCalendar from "@/components/AvailabilityCalendar";
+import ImageGallery from "@/components/ImageGallery";
 import ReviewList from "@/components/ReviewList";
 import { getRoom, mainImageUrl, type Room } from "@/lib/api";
+import FavoriteButton from "@/components/FavoriteButton";
 import { useLang, pick } from "@/lib/lang";
 
 export default function RoomDetailPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = use(params);
+  const searchParams = useSearchParams();
+  const initCheckIn = searchParams.get("checkIn") ?? "";
+  const initCheckOut = searchParams.get("checkOut") ?? "";
   const [room, setRoom] = useState<Room | null>(null);
   const [loading, setLoading] = useState(true);
   const [lang] = useLang();
-  const [checkIn, setCheckIn] = useState("");
-  const [checkOut, setCheckOut] = useState("");
+  const [checkIn, setCheckIn] = useState(initCheckIn);
+  const [checkOut, setCheckOut] = useState(initCheckOut);
   const [selectedTypeId, setSelectedTypeId] = useState<string | null>(null);
   const [guests, setGuests] = useState(1);
 
@@ -60,6 +65,7 @@ export default function RoomDetailPage({ params }: { params: Promise<{ slug: str
             </Link>
             <h1 className="text-2xl md:text-4xl font-bold mt-1">{name}</h1>
           </div>
+          <FavoriteButton targetType="ROOM" roomId={room.id} className="absolute top-4 right-4" />
         </div>
 
         <div className="container mx-auto px-4 md:px-6 py-8 md:py-12">
@@ -110,14 +116,7 @@ export default function RoomDetailPage({ params }: { params: Promise<{ slug: str
                     <i className="fa-regular fa-image text-[#2563eb] mr-2"></i>
                     {pick("รูปภาพ", "Photos", lang)} ({room.images.length})
                   </h2>
-                  <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                    {room.images.map((img, i) => (
-                      <a key={i} href={img.url} target="_blank" rel="noreferrer" className="block aspect-square rounded-xl overflow-hidden bg-slate-100 hover:opacity-90 transition">
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src={img.url} alt="" className="w-full h-full object-cover" />
-                      </a>
-                    ))}
-                  </div>
+                  <ImageGallery images={room.images} heading={name} />
                 </div>
               )}
 
@@ -127,7 +126,12 @@ export default function RoomDetailPage({ params }: { params: Promise<{ slug: str
                   <i className="fa-solid fa-calendar text-[#2563eb] mr-2"></i>
                   {pick("เลือกวันที่เข้าพัก", "Select dates", lang)}
                 </h2>
-                <AvailabilityCalendar onSelectDates={(ci, co) => { setCheckIn(ci); setCheckOut(co); }} />
+                <AvailabilityCalendar
+                  slug={room.slug}
+                  initialCheckIn={initCheckIn || undefined}
+                  initialCheckOut={initCheckOut || undefined}
+                  onSelectDates={(ci, co) => { setCheckIn(ci); setCheckOut(co); }}
+                />
               </div>
 
               <ReviewList resource="room" slug={room.slug} />

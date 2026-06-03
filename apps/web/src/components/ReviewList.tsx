@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useLang } from "@/lib/lang";
+import { t, tx } from "@/lib/i18n";
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
 
@@ -18,7 +20,13 @@ interface ReviewData {
   items: ReviewItem[];
 }
 
+function maskName(name: string): string {
+  const parts = name.trim().split(/\s+/);
+  return parts.map((p) => (p.length <= 2 ? p : p[0] + "*".repeat(p.length - 1))).join(" ");
+}
+
 export default function ReviewList({ resource, slug }: { resource: "room" | "tour"; slug: string }) {
+  const [lang] = useLang();
   const [data, setData] = useState<ReviewData | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -30,21 +38,26 @@ export default function ReviewList({ resource, slug }: { resource: "room" | "tou
   }, [resource, slug]);
 
   if (loading) return null;
+
   if (!data || data.count === 0) {
     return (
       <div className="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm">
-        <h2 className="font-bold text-slate-800 text-lg mb-2"><i className="fa-solid fa-star text-amber-400 mr-2"></i>รีวิว</h2>
-        <p className="text-sm text-slate-400">ยังไม่มีรีวิว — เป็นคนแรกที่รีวิวสิ!</p>
+        <h2 className="font-bold text-slate-800 text-lg mb-2">
+          <i className="fa-solid fa-star text-amber-400 mr-2"></i>{tx(t.review.title, lang)}
+        </h2>
+        <p className="text-sm text-slate-400">{tx(t.review.noReview, lang)}</p>
       </div>
     );
   }
+
+  const dateLocale = lang === "en" ? "en-US" : "th-TH";
 
   return (
     <div className="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm">
       <div className="flex items-center justify-between mb-4">
         <h2 className="font-bold text-slate-800 text-lg">
           <i className="fa-solid fa-star text-amber-400 mr-2"></i>
-          รีวิว <span className="text-slate-400 font-normal text-sm">({data.count})</span>
+          {tx(t.review.title, lang)} <span className="text-slate-400 font-normal text-sm">({data.count})</span>
         </h2>
         <div className="text-right">
           <div className="text-2xl font-bold text-amber-500">{data.avgRating.toFixed(1)}</div>
@@ -68,15 +81,10 @@ export default function ReviewList({ resource, slug }: { resource: "room" | "tou
               </div>
             </div>
             {r.comment && <p className="text-sm text-slate-600 leading-relaxed">{r.comment}</p>}
-            <p className="text-xs text-slate-400 mt-1">{new Date(r.createdAt).toLocaleDateString("th-TH")}</p>
+            <p className="text-xs text-slate-400 mt-1">{new Date(r.createdAt).toLocaleDateString(dateLocale)}</p>
           </div>
         ))}
       </div>
     </div>
   );
-}
-
-function maskName(name: string): string {
-  const parts = name.trim().split(/\s+/);
-  return parts.map((p) => (p.length <= 2 ? p : p[0] + "*".repeat(p.length - 1))).join(" ");
 }

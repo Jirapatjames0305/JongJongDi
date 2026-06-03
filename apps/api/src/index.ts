@@ -15,6 +15,12 @@ import paymentsRouter from "./routes/payments";
 import webhooksRouter from "./routes/webhooks";
 import reviewsRouter from "./routes/reviews";
 import seasonsRouter from "./routes/seasons";
+import productsRouter from "./routes/products";
+import trendingRouter from "./routes/trending";
+import favoritesRouter from "./routes/favorites";
+import couponsRouter from "./routes/coupons";
+import bankAccountsRouter from "./routes/bankAccounts";
+import payoutsRouter from "./routes/payouts";
 import { startReminderJob } from "./jobs/reminders";
 
 const app = express();
@@ -42,6 +48,12 @@ app.use("/api/payments", paymentsRouter);
 app.use("/api/webhooks", webhooksRouter);
 app.use("/api/reviews", reviewsRouter);
 app.use("/api/seasons", seasonsRouter);
+app.use("/api/products", productsRouter);
+app.use("/api/trending", trendingRouter);
+app.use("/api/favorites", favoritesRouter);
+app.use("/api/coupons", couponsRouter);
+app.use("/api/bank-accounts", bankAccountsRouter);
+app.use("/api/payouts", payoutsRouter);
 
 async function startServer() {
   console.log("─────────────────────────────────");

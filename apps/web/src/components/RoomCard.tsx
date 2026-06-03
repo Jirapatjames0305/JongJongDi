@@ -4,11 +4,17 @@ import Link from "next/link";
 import { useLang, pick } from "@/lib/lang";
 import { type Room, mainImageUrl } from "@/lib/api";
 
-export default function RoomCard({ room }: { room: Room }) {
+export default function RoomCard({ room, checkIn, checkOut }: { room: Room; checkIn?: string; checkOut?: string }) {
   const [lang] = useLang();
   const name = pick(room.nameTh, room.nameEn, lang);
   const desc = pick(room.descriptionTh, room.descriptionEn, lang);
   const img = mainImageUrl(room.images);
+
+  const params = new URLSearchParams();
+  if (checkIn) params.set("checkIn", checkIn);
+  if (checkOut) params.set("checkOut", checkOut);
+  const qs = params.toString();
+  const href = `/rooms/${room.slug}${qs ? `?${qs}` : ""}`;
 
   const types = room.types ?? [];
   const minPrice = types.length ? Math.min(...types.map((t) => t.pricePerNight)) : 0;
@@ -18,7 +24,7 @@ export default function RoomCard({ room }: { room: Room }) {
 
   return (
     <Link
-      href={`/rooms/${room.slug}`}
+      href={href}
       className="bg-white rounded-2xl overflow-hidden shadow-sm border border-slate-100 hover:shadow-lg transition-shadow duration-300 group block"
     >
       <div className="h-52 bg-gradient-to-br from-blue-100 to-cyan-200 relative overflow-hidden">
