@@ -3,6 +3,8 @@
 import { useLang } from "@/lib/lang";
 import { t, tx } from "@/lib/i18n";
 
+const ADMIN_URL = process.env.NEXT_PUBLIC_ADMIN_URL ?? "https://admin.jongjongdi.com";
+
 export default function Footer() {
   const [lang] = useLang();
   const f = t.footer;
@@ -72,8 +74,8 @@ export default function Footer() {
             <ul className="space-y-2.5 text-sm text-slate-400">
               <li><a href="/track" className="hover:text-white transition">{tx(t.nav.trackNav, lang)}</a></li>
               <li><a href="mailto:jongjongdisupport@gmail.com" className="hover:text-white transition">{lang === "th" ? "ติดต่อเรา" : "Contact Us"}</a></li>
-              <li><a href="http://localhost:3001/register" className="hover:text-white transition">{tx(f.partner, lang)}</a></li>
-              <li><a href="http://localhost:3001/login" className="hover:text-white transition">{tx(f.partnerLogin, lang)}</a></li>
+              <li><a href={`${ADMIN_URL}/register`} className="hover:text-white transition">{tx(f.partner, lang)}</a></li>
+              <li><a href={`${ADMIN_URL}/login`} className="hover:text-white transition">{tx(f.partnerLogin, lang)}</a></li>
             </ul>
           </div>
 
