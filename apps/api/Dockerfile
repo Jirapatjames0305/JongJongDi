@@ -8,7 +8,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends openssl ca-cert
     && rm -rf /var/lib/apt/lists/*
 ENV PNPM_HOME=/pnpm
 ENV PATH=$PNPM_HOME:$PATH
-RUN corepack enable
+# node:20-slim ships an old corepack whose key can't verify pnpm 9.15 — refresh it first
+RUN npm install -g corepack@latest && corepack enable
 WORKDIR /app
 
 # ── deps: install only @jongjongdi/api and its workspace deps ──────────────────
