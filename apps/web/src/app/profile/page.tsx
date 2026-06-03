@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import Navbar from "@/components/Navbar";
@@ -944,7 +944,7 @@ type Tab = "upcoming" | "bookings" | "coupons" | "vouchers" | "favorites" | "pro
 
 const VALID_TABS: Tab[] = ["upcoming", "bookings", "coupons", "vouchers", "favorites", "profile"];
 
-export default function ProfilePage() {
+function ProfileContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [user, setUser] = useState<UserInfo | null>(null);
@@ -1022,5 +1022,13 @@ export default function ProfilePage() {
       </main>
       <Footer />
     </>
+  );
+}
+
+export default function ProfilePage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-slate-50" />}>
+      <ProfileContent />
+    </Suspense>
   );
 }
