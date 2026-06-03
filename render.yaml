@@ -1,0 +1,53 @@
+services:
+  - type: web
+    name: jongjongdi-api
+    runtime: docker
+    dockerfilePath: ./apps/api/Dockerfile
+    dockerContext: .
+    region: singapore
+    plan: starter
+    healthCheckPath: /health
+    autoDeploy: true
+    # Only redeploy when the api or the packages it depends on change.
+    buildFilter:
+      paths:
+        - apps/api/**
+        - packages/database/**
+        - packages/shared/**
+        - pnpm-lock.yaml
+    envVars:
+      - key: NODE_ENV
+        value: production
+      # Secrets — fill these in the Render dashboard (sync:false = not stored in git)
+      - key: DATABASE_URL
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: NEXT_PUBLIC_SITE_URL
+        sync: false
+      - key: NEXT_PUBLIC_ADMIN_URL
+        sync: false
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: SUPABASE_BUCKET
+        sync: false
+      - key: RESEND_API_KEY
+        sync: false
+      - key: EMAIL_FROM
+        sync: false
+      - key: ADMIN_TOKEN
+        sync: false
+      - key: CHILLPAY_API_KEY
+        sync: false
+      - key: CHILLPAY_MD5_SECRET
+        sync: false
+      - key: CHILLPAY_MERCHANT_CODE
+        sync: false
+      - key: CHILLPAY_PAYMENT_URL
+        sync: false
+      - key: CHILLPAY_NOTIFY_URL
+        sync: false
+      - key: CHILLPAY_RETURN_BASE
+        sync: false

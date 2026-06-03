@@ -18,7 +18,7 @@ import seasonsRouter from "./routes/seasons";
 import { startReminderJob } from "./jobs/reminders";
 
 const app = express();
-const PORT = Number(process.env.API_PORT ?? 4000);
+const PORT = Number(process.env.PORT ?? process.env.API_PORT ?? 4000);
 
 const allowedOrigins = [
   process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000",
