@@ -1,0 +1,324 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Enums ───────────────────────────────────────────────────────────────────
+
+enum OperatorRole {
+  SUPER_ADMIN
+  OPERATOR
+}
+
+enum OperatorStatus {
+  PENDING
+  ACTIVE
+  SUSPENDED
+}
+
+enum BookingType {
+  ACCOMMODATION
+  DIVE_TOUR
+}
+
+enum BookingStatus {
+  PENDING_PAYMENT
+  PENDING_CONFIRM
+  CONFIRMED
+  CHECKED_IN
+  COMPLETED
+  CANCELLED
+  REFUNDED
+  NO_SHOW
+}
+
+enum PaymentStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  REFUNDED
+}
+
+enum PaymentMethod {
+  BANK_TRANSFER
+  PROMPTPAY
+  CREDIT_CARD
+  ALIPAY
+  WECHAT_PAY
+}
+
+enum UserRole {
+  ADMIN
+  CUSTOMER
+}
+
+enum CustomerStatus {
+  ACTIVE
+  BLACKLISTED
+}
+
+// ─── Operator (ผู้ประกอบการ) ────────────────────────────────────────────────
+
+model Operator {
+  id           String         @id @default(cuid())
+  email        String         @unique
+  passwordHash String
+  name         String
+  businessName String
+  phone        String
+  role         OperatorRole   @default(OPERATOR)
+  status       OperatorStatus @default(PENDING)
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+
+  rooms Room[]
+  tours Tour[]
+}
+
+// ─── User ─────────────────────────────────────────────────────────────────────
+
+model User {
+  id           String         @id @default(cuid())
+  name         String
+  phone        String         @unique
+  email        String?        @unique
+  passwordHash String?
+  role         UserRole       @default(CUSTOMER)
+  status       CustomerStatus @default(ACTIVE)
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+
+  bookings Booking[]
+  notes    CustomerNote[]
+  reviews  Review[]
+}
+
+// ─── Room (property / listing — มี types หลายตัว) ─────────────────────────────
+
+model Room {
+  id              String   @id @default(cuid())
+  slug            String   @unique
+  nameTh          String
+  nameEn          String
+  descriptionTh   String   @db.Text
+  descriptionEn   String   @db.Text
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  operatorId        String
+  operator          Operator           @relation(fields: [operatorId], references: [id])
+
+  types             RoomType[]
+  images            RoomImage[]
+  availabilityBlocks AvailabilityBlock[]
+  bookings          Booking[]
+  seasonPrices      SeasonPrice[]
+}
+
+// ห้องประเภทย่อย (เช่น "ห้อง 2 คน", "วิลล่า 4 คน") — เป็นหน่วยที่จองจริง
+model RoomType {
+  id            String  @id @default(cuid())
+  roomId        String
+  nameTh        String
+  nameEn        String
+  pricePerNight Int
+  maxGuests     Int
+  quantity      Int     @default(1)
+  order         Int     @default(0)
+
+  room     Room      @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  bookings Booking[]
+
+  @@index([roomId, order])
+}
+
+model RoomImage {
+  id     String  @id @default(cuid())
+  roomId String
+  url    String
+  isMain Boolean @default(false)
+  order  Int     @default(0)
+
+  room Room @relation(fields: [roomId], references: [id], onDelete: Cascade)
+}
+
+// ─── Tour ─────────────────────────────────────────────────────────────────────
+
+model Tour {
+  id              String   @id @default(cuid())
+  slug            String   @unique
+  nameTh          String
+  nameEn          String
+  descriptionTh   String   @db.Text
+  descriptionEn   String   @db.Text
+  pricePerPerson  Int
+  maxSeats        Int
+  durationHours   Float
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  operatorId        String
+  operator          Operator           @relation(fields: [operatorId], references: [id])
+
+  images            TourImage[]
+  schedules         TourSchedule[]
+  availabilityBlocks AvailabilityBlock[]
+  seasonPrices      SeasonPrice[]
+}
+
+model TourImage {
+  id     String  @id @default(cuid())
+  tourId String
+  url    String
+  isMain Boolean @default(false)
+  order  Int     @default(0)
+
+  tour Tour @relation(fields: [tourId], references: [id], onDelete: Cascade)
+}
+
+model TourSchedule {
+  id             String   @id @default(cuid())
+  tourId         String
+  departureDate  DateTime @db.Date
+  departureTime  String
+  availableSeats Int
+
+  tour     Tour      @relation(fields: [tourId], references: [id], onDelete: Cascade)
+  bookings Booking[]
+
+  @@unique([tourId, departureDate, departureTime])
+}
+
+// ─── Availability Block ───────────────────────────────────────────────────────
+
+enum BlockTargetType {
+  ROOM
+  TOUR
+}
+
+model AvailabilityBlock {
+  id         String          @id @default(cuid())
+  targetType BlockTargetType
+  startDate  DateTime        @db.Date
+  endDate    DateTime        @db.Date
+  reason     String?
+  createdAt  DateTime        @default(now())
+
+  room Room? @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  roomId String?
+
+  tour Tour? @relation(fields: [tourId], references: [id], onDelete: Cascade)
+  tourId String?
+}
+
+// ─── Booking ──────────────────────────────────────────────────────────────────
+
+model Booking {
+  id            String        @id @default(cuid())
+  bookingNumber String        @unique
+  type          BookingType
+  status        BookingStatus @default(PENDING_PAYMENT)
+
+  userId        String?
+  guestName     String
+  guestPhone    String
+  guestEmail    String
+  numGuests     Int
+
+  // Accommodation fields
+  checkInDate   DateTime? @db.Date
+  checkOutDate  DateTime? @db.Date
+  roomId        String?
+  roomTypeId    String?
+
+  // Tour fields
+  tourScheduleId String?
+
+  totalAmount   Int
+  internalNote  String?   @db.Text
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  user         User?         @relation(fields: [userId], references: [id])
+  room         Room?         @relation(fields: [roomId], references: [id])
+  roomType     RoomType?     @relation(fields: [roomTypeId], references: [id])
+  tourSchedule TourSchedule? @relation(fields: [tourScheduleId], references: [id])
+  payments     Payment[]
+  review       Review?
+}
+
+// ─── Season Pricing ───────────────────────────────────────────────────────────
+// ใช้กับช่วงเทศกาล / high season — apply พิเศษกับ Room หรือ Tour
+// ถ้า absolutePrice มีค่า → ใช้ราคานี้แทน (ต่อคืน/ต่อคน)
+// มิฉะนั้น ใช้ multiplier (1.5 = บวก 50%)
+
+model SeasonPrice {
+  id            String   @id @default(cuid())
+  name          String
+  roomId        String?
+  tourId        String?
+  startDate     DateTime @db.Date
+  endDate       DateTime @db.Date
+  multiplier    Float    @default(1.0)
+  absolutePrice Int?
+  createdAt     DateTime @default(now())
+
+  room Room? @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  tour Tour? @relation(fields: [tourId], references: [id], onDelete: Cascade)
+
+  @@index([roomId, startDate])
+  @@index([tourId, startDate])
+}
+
+// ─── Review ───────────────────────────────────────────────────────────────────
+
+model Review {
+  id        String   @id @default(cuid())
+  bookingId String   @unique
+  userId    String?
+  rating    Int
+  comment   String?  @db.Text
+  createdAt DateTime @default(now())
+
+  booking Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  user    User?   @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+}
+
+// ─── Payment ──────────────────────────────────────────────────────────────────
+
+model Payment {
+  id              String        @id @default(cuid())
+  bookingId       String
+  amount          Int
+  method          PaymentMethod
+  status          PaymentStatus @default(PENDING)
+  slipUrl         String?
+  chillpayOrderNo       String?  @unique
+  chillpayTransactionId String?
+  failureMessage  String?
+  approvedAt      DateTime?
+  rejectedAt      DateTime?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  booking Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+}
+
+// ─── Customer Note ────────────────────────────────────────────────────────────
+
+model CustomerNote {
+  id        String   @id @default(cuid())
+  userId    String
+  note      String   @db.Text
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}

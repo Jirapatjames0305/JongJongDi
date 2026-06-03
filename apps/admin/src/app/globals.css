@@ -1,0 +1,9 @@
+@import "tailwindcss";
+
+@theme {
+  --color-primary: #2563eb;
+  --color-secondary: #f59e0b;
+  --font-family-sans: "Prompt", sans-serif;
+}
+
+html { scroll-behavior: smooth; }
