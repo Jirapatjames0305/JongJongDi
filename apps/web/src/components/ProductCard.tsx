@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useLang, pick } from "@/lib/lang";
 import { type Product, mainImageUrl } from "@/lib/api";
+import { resolveProductLink } from "@/lib/wattana";
 
 const fmt = (n: number) => n.toLocaleString("en-US");
 
@@ -10,10 +11,11 @@ export default function ProductCard({ product }: { product: Product }) {
   const [lang] = useLang();
   const name = pick(product.nameTh, product.nameEn, lang);
   const img = mainImageUrl(product.images);
+  const href = resolveProductLink(`/products/${product.slug}`);
 
   return (
     <Link
-      href={`/products/${product.slug}`}
+      href={href}
       className="bg-white rounded-2xl overflow-hidden shadow-sm border border-slate-100 hover:shadow-lg transition-shadow duration-300 group block"
     >
       <div className="h-44 bg-gradient-to-br from-yellow-100 to-amber-200 relative overflow-hidden">

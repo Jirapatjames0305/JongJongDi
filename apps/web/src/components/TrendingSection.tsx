@@ -1,4 +1,5 @@
 import { listTrending, type TrendingCard } from "@/lib/api";
+import { resolveProductLink } from "@/lib/wattana";
 import { TrendingSectionHeader } from "./TrendingSectionHeader";
 
 const fmt = (n: number) => n.toLocaleString("en-US");
@@ -41,7 +42,7 @@ export default async function TrendingSection() {
             return (
               <a
                 key={card.id}
-                href={card.link}
+                href={resolveProductLink(card.link)}
                 className="min-w-[75vw] sm:min-w-[300px] md:min-w-0 snap-center block relative rounded-2xl overflow-hidden group shadow-md hover:shadow-xl transition-shadow duration-300 active:scale-[0.98]"
               >
                 {/* Image / gradient fill */}

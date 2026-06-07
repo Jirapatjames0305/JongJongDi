@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JongJongDi - จองจองดิ | จองง่าย ครบ จบที่เดียว</title>
+     <!-- Favicon (New Design: Blue Box with 'J' and notification dot) -->
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='20' fill='%232563EB'/%3E%3Ctext x='50' y='75' font-family='sans-serif' font-weight='bold' font-size='60' text-anchor='middle' fill='white'%3EJ%3C/text%3E%3Ccircle cx='72' cy='28' r='12' fill='%23F59E0B' stroke='white' stroke-width='3'/%3E%3C/svg%3E">
+
+    <!-- Google Fonts: Prompt -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- Config Tailwind Fonts -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Prompt', 'sans-serif'],
+                    },
+                    colors: {
+                        primary: '#2563EB', // Blue 600
+                        secondary: '#F59E0B', // Amber 500
+                        dark: '#0F172A', // Slate 900 (Darker)
+                    },
+                    screens: {
+                        'xs': '475px',
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        /* Smooth Scrolling */
+        html {
+            scroll-behavior: smooth;
+        }
+        
+        /* Custom Animation */
+        .fade-in-up {
+            animation: fadeInUp 0.8s ease-out;
+        }
+        
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .card-hover:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Hide Scrollbar but allow functionality */
+        .scrollbar-hide::-webkit-scrollbar {
+            display: none;
+        }
+        .scrollbar-hide {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
+</head>
+<body class="font-sans text-slate-700 bg-slate-50 antialiased selection:bg-blue-100 selection:text-blue-900">
+
+    <!-- Navigation -->
+    <nav class="bg-white/95 backdrop-blur-sm shadow-sm fixed w-full z-50 transition-all duration-300 border-b border-slate-100" id="navbar">
+        <div class="container mx-auto px-4 md:px-6 py-3">
+            <div class="flex justify-between items-center">
+                <!-- Logo -->
+                <a href="#" class="text-xl md:text-2xl font-bold text-primary flex items-center gap-2">
+    <div class="bg-blue-50 p-1.5 rounded-lg">
+        <!-- ใส่ class ขนาด (w-8 h-8) และ alt text -->
+        <img src="img/logo.svg" alt="Logo" class="w-8 h-8"> 
+    </div>
+    JongJongDi
+</a>
+
+                <!-- Desktop Menu -->
+                <div class="hidden md:flex space-x-8 items-center font-medium text-sm">
+                    <a href="#services" class="text-slate-600 hover:text-primary transition">บริการจอง</a>
+                    <a href="#system" class="text-slate-600 hover:text-primary transition">ซื้อระบบ</a>
+                    <a href="#features" class="text-slate-600 hover:text-primary transition">ฟีเจอร์</a>
+                    <a href="#contact" class="px-5 py-2 bg-primary text-white rounded-full hover:bg-blue-700 transition shadow-lg shadow-blue-500/30 hover:shadow-blue-500/40">
+                        เข้าสู่ระบบ
+                    </a>
+                </div>
+
+                <!-- Mobile Menu Button -->
+                <button id="mobile-menu-btn" class="md:hidden p-2 text-slate-600 hover:text-primary focus:outline-none bg-slate-50 rounded-lg">
+                    <i class="fa-solid fa-bars text-xl"></i>
+                </button>
+            </div>
+        </div>
+        
+        <!-- Mobile Menu Dropdown -->
+        <div id="mobile-menu" class="hidden md:hidden bg-white border-t border-slate-100 absolute w-full shadow-xl">
+            <div class="flex flex-col p-4 space-y-2">
+                <a href="#services" class="block py-3 px-4 rounded-lg hover:bg-slate-50 text-slate-600 font-medium"><i class="fa-solid fa-magnifying-glass w-6 text-center mr-2 text-slate-400"></i> บริการจอง</a>
+                <a href="#system" class="block py-3 px-4 rounded-lg hover:bg-slate-50 text-slate-600 font-medium"><i class="fa-solid fa-shop w-6 text-center mr-2 text-slate-400"></i> ซื้อระบบ</a>
+                <a href="#features" class="block py-3 px-4 rounded-lg hover:bg-slate-50 text-slate-600 font-medium"><i class="fa-solid fa-star w-6 text-center mr-2 text-slate-400"></i> ฟีเจอร์</a>
+                <div class="border-t border-slate-100 my-2 pt-2"></div>
+                <a href="#contact" class="block py-3 px-4 bg-primary text-white rounded-lg font-semibold text-center shadow-md">เข้าสู่ระบบ / ลงทะเบียน</a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <header class="relative pt-28 pb-12 lg:pt-48 lg:pb-20 overflow-hidden">
+        <!-- Background Pattern -->
+        <div class="absolute inset-0 bg-gradient-to-br from-blue-50 via-white to-blue-50/30 -z-10"></div>
+        <!-- Blobs optimized for mobile opacity -->
+        <div class="absolute top-0 right-0 -mr-20 -mt-20 w-64 h-64 md:w-96 md:h-96 rounded-full bg-blue-100 opacity-40 blur-3xl"></div>
+        <div class="absolute bottom-0 left-0 -ml-20 -mb-20 w-60 h-60 md:w-80 md:h-80 rounded-full bg-yellow-100 opacity-40 blur-3xl"></div>
+
+        <div class="container mx-auto px-4 md:px-6 text-center">
+            <h1 class="text-3xl md:text-6xl font-bold text-slate-800 mb-4 md:mb-6 leading-tight fade-in-up">
+                เรื่องจอง เรื่องง่าย <br class="inline">
+                <span class="text-primary relative inline-block">
+                    จบที่ JongJongDi
+                    <svg class="absolute w-full h-2 bottom-0 left-0 text-yellow-300 -z-10" viewBox="0 0 100 10" preserveAspectRatio="none">
+                        <path d="M0 5 Q 50 10 100 5" stroke="currentColor" stroke-width="8" fill="none" opacity="0.5" />
+                    </svg>
+                </span>
+            </h1>
+            <p class="text-base md:text-xl text-slate-600 mb-8 md:mb-10 max-w-2xl mx-auto px-4 fade-in-up leading-relaxed" style="animation-delay: 0.1s;">
+                จองง่าย ครบ จบในที่เดียว! ทั้งที่พัก ร้านอาหาร คิวบริการ <br class="hidden md:inline">และสินค้าสุดฮิต สะดวก รวดเร็ว ตอบโจทย์ทุกไลฟ์สไตล์
+            </p>
+            
+            <!-- Action Buttons -->
+            <div class="flex flex-row justify-center gap-2 md:gap-4 px-2 fade-in-up" style="animation-delay: 0.2s;">
+                <!-- ปุ่ม 1: ค้นหา -->
+                <a href="#services" class="flex-1 sm:flex-none sm:w-auto px-4 py-3 bg-primary text-white rounded-full font-medium sm:font-semibold hover:bg-blue-700 transition shadow-lg shadow-blue-500/30 flex items-center justify-center gap-2 active:scale-95 duration-150 text-sm md:text-base">
+                    <i class="fa-solid fa-magnifying-glass"></i> 
+                    <span>จองบริการ</span>
+                </a>
+                
+                <!-- ปุ่ม 2: ธุรกิจ -->
+                <a href="#system" class="flex-1 sm:flex-none sm:w-auto px-4 py-3 bg-white text-primary border border-primary/30 rounded-full font-medium sm:font-semibold hover:bg-blue-50 transition flex items-center justify-center gap-2 active:scale-95 duration-150 text-sm md:text-base">
+                    <i class="fa-solid fa-shop"></i> 
+                    <span>สำหรับธุรกิจ</span>
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <!-- NEW SECTION: Trending/Seasonal (ฮิตติดกระแส) -->
+    <!-- Mobile optimized: Reduced padding, Snap scrolling -->
+    <section class="py-8 md:py-10 bg-white border-b border-slate-100">
+        <div class="container mx-auto px-4 md:px-6">
+            <div class="flex items-center justify-between mb-6">
+                <div>
+                    <h2 class="text-xl md:text-3xl font-bold text-slate-800 flex items-center gap-2">
+                        <i class="fa-solid fa-fire text-red-500 animate-pulse"></i> ฮิตติดกระแส
+                    </h2>
+                    <p class="text-slate-500 text-xs md:text-sm mt-1">สินค้าและโปรโมชั่นมาแรง ห้ามพลาด!</p>
+                </div>
+                <a href="#" class="text-primary hover:text-blue-700 text-sm font-semibold whitespace-nowrap bg-blue-50 px-3 py-1 rounded-full transition">ดูทั้งหมด <i class="fa-solid fa-arrow-right ml-1"></i></a>
+            </div>
+
+            <!-- Horizontal Scroll with Snap -->
+            <div class="flex overflow-x-auto pb-8 gap-4 px-4 -mx-4 md:grid md:grid-cols-3 md:gap-8 md:overflow-visible md:mx-0 md:px-0 scrollbar-hide snap-x snap-mandatory">
+                
+                <!-- Card 1: Durian Chips -->
+                <div class="min-w-[85vw] sm:min-w-[300px] md:min-w-0 md:w-auto bg-white rounded-xl shadow-md md:shadow-lg shadow-slate-200 overflow-hidden group cursor-pointer border border-slate-100 relative card-hover snap-center" onclick="window.location.href='./ทุเรียน';">
+                    <div class="absolute top-3 right-3 bg-red-600 text-white text-[10px] md:text-xs font-bold px-2.5 py-1 rounded-full z-10 shadow-sm uppercase tracking-wide">
+                        <i class="fa-solid fa-star text-yellow-300 mr-1"></i> Best Seller
+                    </div>
+                    <div class="h-40 md:h-48 bg-slate-200 relative overflow-hidden">
+                        <img src="img/1.jpg" alt="ทุเรียนทอด" class="w-full h-full object-cover group-hover:scale-110 transition duration-500">
+                    </div>
+                    <div class="p-4">
+                        <div class="flex items-center gap-1 text-[10px] md:text-xs text-slate-500 mb-2">
+                            <span class="bg-slate-100 px-2 py-0.5 rounded text-slate-600"><i class="fa-solid fa-location-dot text-red-500 mr-1"></i> จันทบุรี</span>
+                            <span class="text-green-600 font-medium ml-auto"><i class="fa-solid fa-truck-fast"></i> พร้อมส่งทั่วไทย</span>
+                        </div>
+                        <h3 class="font-bold text-base md:text-lg mb-1 text-slate-800 group-hover:text-primary transition line-clamp-1">ทุเรียนทอดพรีเมียม โซเดียมต่ำ</h3>
+                        <p class="text-xs md:text-sm text-slate-500 mb-3 line-clamp-2 leading-relaxed">กรอบ อร่อย เคี้ยวเพลิน จากสวนวัฒนาการ์เด้นวิว (Wattana Garden View)</p>
+                        <div class="flex justify-between items-end border-t border-slate-100 pt-3">
+                            <div>
+                                <span class="text-xs text-slate-400 line-through block">180.-</span>
+                                <div class="text-secondary font-bold text-lg md:text-xl leading-none">150.- <span class="text-xs text-slate-500 font-normal">/ถุง</span></div>
+                            </div>
+                            <button class="bg-primary text-white px-4 py-1.5 md:py-2 rounded-lg text-xs md:text-sm font-semibold hover:bg-blue-700 transition shadow-md shadow-blue-500/20 active:scale-95">สั่งซื้อเลย</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Card 2: Concert -->
+                <div class="d-none min-w-[85vw] sm:min-w-[300px] md:min-w-0 md:w-auto bg-white rounded-xl shadow-md md:shadow-lg shadow-slate-200 overflow-hidden group cursor-pointer border border-slate-100 relative card-hover snap-center" onclick="window.open('https://www.facebook.com/profile.php?id=61562172576510', '_blank');">
+                     <!-- <div class="absolute top-3 right-3 bg-blue-600 text-white text-[10px] md:text-xs font-bold px-2.5 py-1 rounded-full z-10 shadow-sm">
+                        ใกล้หมด
+                    </div> -->
+                    <div class="h-40 md:h-48 bg-slate-200 relative overflow-hidden">
+                        <img src="img/content2-1.jpg" alt="อุทยานแห่งชาติ" class="w-full h-full object-cover group-hover:scale-110 transition duration-500">
+                    </div>
+                    <div class="p-4">
+                        <div class="flex items-center gap-1 text-[10px] md:text-xs text-slate-500 mb-2">
+                             <span class="bg-slate-100 px-2 py-0.5 rounded text-slate-600"><i class="fa-solid fa-tree text-green-500 mr-1"></i> อุทยานแห่งชาติ เขาสิบห้าชั้น</span>
+                             <span class="ml-auto text-slate-400">จันทบุรี</span>
+                        </div>
+                        <h3 class="font-bold text-base md:text-lg mb-1 text-slate-800 group-hover:text-primary transition line-clamp-1">“หนาวนี้…หนีเมือง ขึ้นเขา นอนดูดาว”</h3>
+                        <p class="text-xs md:text-sm text-slate-500 mb-3 line-clamp-1">โทนอบอุ่น–ธรรมชาติ–slow life</p>
+                        <p class="text-xs md:text-sm text-slate-500 mb-3 line-clamp-1">⛺️ค่ากางเต็นท์ คนละ 30 บาท ค่าเข้าอุทยาน คนละ 20 บาท ค่ารถยนต์ 30 บาท</p>
+                        <div class="flex justify-between items-end border-t border-slate-100 pt-3">
+                            <div>
+                                <div class="text-secondary font-bold text-lg md:text-xl leading-none">20.-</div>
+                            </div>
+                            <button class="bg-white text-primary border border-primary px-4 py-1.5 md:py-2 rounded-lg text-xs md:text-sm font-semibold hover:bg-blue-50 transition active:scale-95" onclick="window.open('https://www.facebook.com/profile.php?id=61562172576510', '_blank');" style="cursor: pointer;">ดูรายละเอียด</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Card 3: Camping -->
+                <div class="d-none min-w-[85vw] sm:min-w-[300px] md:min-w-0 md:w-auto bg-white rounded-xl shadow-md md:shadow-lg shadow-slate-200 overflow-hidden group cursor-pointer border border-slate-100 relative card-hover snap-center" onclick="showToast('สนใจจองแคมป์ปิ้ง')">
+                    <div class="h-40 md:h-48 bg-slate-200 relative overflow-hidden">
+                        <img src="img/content2.jpg" alt="Camping" class="w-full h-full object-cover group-hover:scale-110 transition duration-500">
+                    </div>
+                    <div class="p-4">
+                        <div class="flex items-center gap-1 text-[10px] md:text-xs text-slate-500 mb-2">
+                            <span class="bg-slate-100 px-2 py-0.5 rounded text-slate-600"><i class="fa-solid fa-tree text-green-500 mr-1"></i> เขาใหญ่</span>
+                        </div>
+                        <h3 class="font-bold text-base md:text-lg mb-1 text-slate-800 group-hover:text-primary transition line-clamp-1">Glamping Sky Camp รับลมหนาว</h3>
+                        <p class="text-xs md:text-sm text-slate-500 mb-3 line-clamp-1">ที่พักเต็นท์หรู ชมดาว สัมผัสหมอก</p>
+                        <div class="flex justify-between items-end border-t border-slate-100 pt-3">
+                            <div>
+                                <span class="text-xs text-slate-400 line-through block">3,500.-</span>
+                                <div class="text-secondary font-bold text-lg md:text-xl leading-none">2,200.-</div>
+                            </div>
+                            <button class="bg-white text-primary border border-primary px-4 py-1.5 md:py-2 rounded-lg text-xs md:text-sm font-semibold hover:bg-blue-50 transition active:scale-95">ดูห้องพัก</button>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </section>
+
+    <!-- Services Grid (Dynamic Section) -->
+    <section id="services" class="py-12 md:py-20 bg-slate-50">
+        <div class="container mx-auto px-4 md:px-6">
+            <div class="text-center mb-10 md:mb-16">
+                <span class="text-secondary font-bold text-xs tracking-widest uppercase">Categories</span>
+                <h2 class="text-2xl md:text-4xl font-bold text-slate-800 mt-2">บริการที่คุณต้องการ</h2>
+                <div class="w-16 h-1 bg-primary mx-auto mt-3 rounded-full"></div>
+            </div>
+
+            <!-- Grid Layout -->
+            <div class="grid grid-cols-2 lg:grid-cols-5 gap-3 md:gap-8">
+                
+                <!-- Card 1: Hotels -->
+                <div class="bg-white rounded-xl p-5 md:p-8 text-center transition-all duration-300 card-hover border border-slate-100 cursor-pointer shadow-sm hover:shadow-lg active:scale-95" onclick="openCategory('ที่พัก')">
+                    <div class="w-12 h-12 md:w-16 md:h-16 bg-blue-50 text-primary rounded-full flex items-center justify-center text-xl md:text-2xl mx-auto mb-4 md:mb-6">
+                        <i class="fa-solid fa-hotel"></i>
+                    </div>
+                    <h3 class="text-sm md:text-xl font-bold mb-1 md:mb-3">จองที่พัก</h3>
+                    <p class="hidden md:block text-slate-500 mb-4 text-sm">ค้นหาโรงแรม รีสอร์ททั่วไทย</p>
+                    <span class="text-primary font-semibold text-xs md:text-sm flex items-center justify-center gap-1">เลือก <i class="fa-solid fa-chevron-right text-[10px]"></i></span>
+                </div>
+
+                <!-- Card 2: Restaurants -->
+                <div class="bg-white rounded-xl p-5 md:p-8 text-center transition-all duration-300 card-hover border border-slate-100 cursor-pointer shadow-sm hover:shadow-lg active:scale-95" onclick="openCategory('ร้านอาหาร')">
+                    <div class="w-12 h-12 md:w-16 md:h-16 bg-orange-50 text-orange-500 rounded-full flex items-center justify-center text-xl md:text-2xl mx-auto mb-4 md:mb-6">
+                        <i class="fa-solid fa-utensils"></i>
+                    </div>
+                    <h3 class="text-sm md:text-xl font-bold mb-1 md:mb-3">จองโต๊ะ</h3>
+                    <p class="hidden md:block text-slate-500 mb-4 text-sm">จองโต๊ะร้านดัง ไม่ต้องรอคิว</p>
+                    <span class="text-orange-500 font-semibold text-xs md:text-sm flex items-center justify-center gap-1">เลือก <i class="fa-solid fa-chevron-right text-[10px]"></i></span>
+                </div>
+
+                <!-- Card 3: Queue -->
+                <div class="bg-white rounded-xl p-5 md:p-8 text-center transition-all duration-300 card-hover border border-slate-100 cursor-pointer shadow-sm hover:shadow-lg active:scale-95" onclick="openCategory('คิวบริการ')">
+                    <div class="w-12 h-12 md:w-16 md:h-16 bg-green-50 text-green-600 rounded-full flex items-center justify-center text-xl md:text-2xl mx-auto mb-4 md:mb-6">
+                        <i class="fa-solid fa-user-clock"></i>
+                    </div>
+                    <h3 class="text-sm md:text-xl font-bold mb-1 md:mb-3">จองคิว</h3>
+                    <p class="hidden md:block text-slate-500 mb-4 text-sm">คลินิก ตัดผม ล้างรถ ฯลฯ</p>
+                    <span class="text-green-600 font-semibold text-xs md:text-sm flex items-center justify-center gap-1">เลือก <i class="fa-solid fa-chevron-right text-[10px]"></i></span>
+                </div>
+
+                <!-- Card 4: Tickets -->
+                <div class="bg-white rounded-xl p-5 md:p-8 text-center transition-all duration-300 card-hover border border-slate-100 cursor-pointer shadow-sm hover:shadow-lg active:scale-95" onclick="openCategory('ตั๋วเข้าชม')">
+                    <div class="w-12 h-12 md:w-16 md:h-16 bg-purple-50 text-purple-600 rounded-full flex items-center justify-center text-xl md:text-2xl mx-auto mb-4 md:mb-6">
+                        <i class="fa-solid fa-ticket"></i>
+                    </div>
+                    <h3 class="text-sm md:text-xl font-bold mb-1 md:mb-3">จองตั๋ว</h3>
+                    <p class="hidden md:block text-slate-500 mb-4 text-sm">คอนเสิร์ต สวนสนุก อีเวนต์</p>
+                    <span class="text-purple-600 font-semibold text-xs md:text-sm flex items-center justify-center gap-1">เลือก <i class="fa-solid fa-chevron-right text-[10px]"></i></span>
+                </div>
+
+                <!-- Card 5: Shopping -->
+                <a href="https://siambox.jongjongdi.com/zh" class="bg-white rounded-xl p-5 md:p-8 text-center transition-all duration-300 card-hover border border-slate-100 cursor-pointer shadow-sm hover:shadow-lg active:scale-95 block no-underline">
+                    <div class="w-12 h-12 md:w-16 md:h-16 bg-pink-50 text-pink-600 rounded-full flex items-center justify-center text-xl md:text-2xl mx-auto mb-4 md:mb-6">
+                        <i class="fa-solid fa-bag-shopping"></i>
+                    </div>
+                    <h3 class="text-sm md:text-xl font-bold mb-1 md:mb-3 text-slate-800">สั่งสินค้าไทย-จีน</h3>
+                    <p class="hidden md:block text-slate-500 mb-4 text-sm">สั่งสินค้าจากไทยส่งตรงถึงจีน</p>
+                    <span class="text-pink-600 font-semibold text-xs md:text-sm flex items-center justify-center gap-1">เลือก <i class="fa-solid fa-chevron-right text-[10px]"></i></span>
+                </a>
+
+            </div>
+        </div>
+    </section>
+
+    <!-- B2B System Sale Section -->
+    <section id="system" class="py-12 md:py-20 bg-dark text-white relative overflow-hidden">
+        <div class="absolute top-0 left-0 w-full h-full opacity-5 pointer-events-none">
+            <i class="fa-solid fa-chart-line absolute top-10 left-10 text-9xl"></i>
+        </div>
+
+        <div class="container mx-auto px-4 md:px-6 relative z-10">
+            <div class="flex flex-col lg:flex-row items-center gap-10 lg:gap-12">
+                <div class="lg:w-1/2 text-center lg:text-left">
+                    <span class="text-secondary font-bold text-xs tracking-wider uppercase mb-3 block">สำหรับเจ้าของธุรกิจ (For Business)</span>
+                    <h2 class="text-2xl md:text-5xl font-bold mb-4 md:mb-6 leading-tight">บริหารจัดการธุรกิจง่ายขึ้น<br>ด้วยระบบจองอัตโนมัติ</h2>
+                    <p class="text-slate-300 text-sm md:text-lg mb-8 mx-auto lg:mx-0 max-w-lg">
+                        ลดความผิดพลาด เพิ่มยอดขายด้วย JongJongDi System ระบบจัดการคิวและออเดอร์ Real-time พร้อมสรุปยอดขายทันที
+                    </p>
+                    
+                    <ul class="space-y-3 mb-8 text-left inline-block">
+                        <li class="flex items-center gap-3 text-sm md:text-base">
+                            <i class="fa-solid fa-check-circle text-green-400"></i>
+                            <span>เปิดรับจองได้ตลอด 24 ชั่วโมง</span>
+                        </li>
+                        <li class="flex items-center gap-3 text-sm md:text-base">
+                            <i class="fa-solid fa-check-circle text-green-400"></i>
+                            <span>รองรับ QR Code และตัดบัตรเครดิต</span>
+                        </li>
+                        <li class="flex items-center gap-3 text-sm md:text-base">
+                            <i class="fa-solid fa-check-circle text-green-400"></i>
+                            <span>Dashboard ดูยอดขายรายวันแบบ Real-time</span>
+                        </li>
+                    </ul>
+
+                    <div class="block">
+                        <a href="mailto:puangkasem@gmail.com?subject=สนใจระบบจอง JongJongDi - ขอใบเสนอราคา" class="inline-block w-full sm:w-auto px-8 py-3 bg-secondary text-white rounded-lg font-bold hover:bg-yellow-600 transition shadow-lg shadow-yellow-500/20 active:scale-95 flex items-center justify-center gap-2">
+                            <i class="fa-solid fa-envelope"></i> ขอใบเสนอราคา / สนใจระบบ
+                        </a>
+                    </div>
+                </div>
+                <div class="lg:w-1/2 w-full">
+                    <div class="bg-white/10 backdrop-blur-sm rounded-2xl p-4 md:p-6 border border-white/10 shadow-2xl">
+                        <div class="bg-white rounded-xl overflow-hidden shadow-lg">
+                            <div class="bg-slate-50 p-3 border-b flex items-center gap-2">
+                                <div class="flex gap-1.5">
+                                    <div class="w-2.5 h-2.5 bg-red-400 rounded-full"></div>
+                                    <div class="w-2.5 h-2.5 bg-yellow-400 rounded-full"></div>
+                                    <div class="w-2.5 h-2.5 bg-green-400 rounded-full"></div>
+                                </div>
+                                <div class="ml-2 text-[10px] text-slate-400 font-mono">dashboard.jongjongdi.com</div>
+                            </div>
+                            <div class="p-6">
+                                <div class="flex justify-between items-end mb-6">
+                                    <div>
+                                        <div class="text-xs text-slate-500">ยอดจองวันนี้</div>
+                                        <div class="text-2xl font-bold text-slate-800">128 <span class="text-sm font-normal text-slate-400">รายการ</span></div>
+                                    </div>
+                                    <div class="bg-green-100 text-green-600 text-xs px-2 py-1 rounded font-bold">+12%</div>
+                                </div>
+                                <div class="flex items-end gap-1.5 h-24">
+                                    <div class="w-1/6 bg-blue-50 h-1/2 rounded-t"></div>
+                                    <div class="w-1/6 bg-blue-100 h-2/3 rounded-t"></div>
+                                    <div class="w-1/6 bg-blue-200 h-1/3 rounded-t"></div>
+                                    <div class="w-1/6 bg-primary h-full rounded-t"></div>
+                                    <div class="w-1/6 bg-blue-200 h-3/4 rounded-t"></div>
+                                    <div class="w-1/6 bg-blue-100 h-1/2 rounded-t"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="bg-white border-t border-slate-200 pt-12 pb-8">
+        <div class="container mx-auto px-6">
+            <div class="grid grid-cols-1 text-center md:text-left md:grid-cols-4 gap-8 md:gap-12 mb-10">
+                <div class="col-span-1 md:col-span-1">
+                    <a href="#" class="text-2xl font-bold text-primary flex items-center justify-center md:justify-start gap-2 mb-4">
+                        <i class="fa-solid fa-calendar-check text-secondary"></i>
+                        JongJongDi
+                    </a>
+                    <p class="text-slate-500 text-sm leading-relaxed">
+                        แพลตฟอร์มการจองที่เข้าใจคนไทย<br>ครบ จบ ง่าย ในที่เดียว
+                    </p>
+                </div>
+                <div>
+                    <h4 class="font-bold text-slate-800 mb-4">บริการ</h4>
+                    <ul class="space-y-2 text-sm text-slate-500">
+                        <li><a href="#" class="hover:text-primary">จองที่พัก</a></li>
+                        <li><a href="#" class="hover:text-primary">จองร้านอาหาร</a></li>
+                        <li><a href="#" class="hover:text-primary">จองตั๋ว</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h4 class="font-bold text-slate-800 mb-4">สำหรับธุรกิจ</h4>
+                    <ul class="space-y-2 text-sm text-slate-500">
+                        <li><a href="#" class="hover:text-primary">ซื้อระบบจอง</a></li>
+                        <li><a href="#" class="hover:text-primary">เข้าสู่ระบบพาร์ทเนอร์</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h4 class="font-bold text-slate-800 mb-4">ติดต่อเรา</h4>
+                    <ul class="space-y-3 text-sm text-slate-500 flex flex-col items-center md:items-start">
+                        <li class="flex items-center gap-2"><i class="fa-solid fa-phone text-primary"></i> 080-225-6669</li>
+                        <li class="flex items-center gap-2"><i class="fa-solid fa-envelope text-primary"></i> puangkasem@gmail.com</li>
+                        <div class="flex gap-4 mt-2">
+                            <a href="#" class="w-9 h-9 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center hover:bg-[#1877F2] hover:text-white transition"><i class="fa-brands fa-facebook-f"></i></a>
+                            <a href="#" class="w-9 h-9 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center hover:bg-[#06C755] hover:text-white transition"><i class="fa-brands fa-line"></i></a>
+                        </div>
+                    </ul>
+                </div>
+            </div>
+            <div class="border-t border-slate-100 pt-6 text-center text-xs text-slate-400">
+                &copy; 2024 JongJongDi.com All rights reserved.
+            </div>
+        </div>
+    </footer>
+
+    <!-- Simple Toast Notification -->
+    <div id="toast" class="fixed bottom-5 left-1/2 transform -translate-x-1/2 md:left-auto md:right-5 md:translate-x-0 bg-slate-800/90 backdrop-blur text-white px-6 py-3 rounded-full md:rounded-lg shadow-xl translate-y-24 transition-transform duration-300 z-50 flex items-center gap-3 min-w-[300px] justify-center md:justify-start">
+        <i class="fa-solid fa-circle-check text-green-400"></i>
+        <span id="toast-message" class="text-sm font-medium">Notification</span>
+    </div>
+
+    <!-- JavaScript -->
+    <script>
+        // Mobile Menu Toggle with Animation
+        const btn = document.getElementById('mobile-menu-btn');
+        const menu = document.getElementById('mobile-menu');
+
+        btn.addEventListener('click', () => {
+            if (menu.classList.contains('hidden')) {
+                menu.classList.remove('hidden');
+                // Small delay to allow display:block to apply before opacity transition if needed
+            } else {
+                menu.classList.add('hidden');
+            }
+        });
+
+        // Close menu when clicking a link
+        document.querySelectorAll('#mobile-menu a').forEach(link => {
+            link.addEventListener('click', () => {
+                menu.classList.add('hidden');
+            });
+        });
+
+        // Sticky Navbar Effect
+        const navbar = document.getElementById('navbar');
+        window.addEventListener('scroll', () => {
+            if (window.scrollY > 10) {
+                navbar.classList.add('shadow-md');
+            } else {
+                navbar.classList.remove('shadow-md');
+            }
+        });
+
+        function openCategory(name) {
+            showToast(`เปิดหน้า: ${name}`);
+        }
+
+        function showToast(message) {
+            const toast = document.getElementById('toast');
+            const msg = document.getElementById('toast-message');
+            msg.textContent = message;
+            toast.classList.remove('translate-y-24');
+            
+            setTimeout(() => {
+                toast.classList.add('translate-y-24');
+            }, 3000);
+        }
+    </script>
+</body>
+</html>
