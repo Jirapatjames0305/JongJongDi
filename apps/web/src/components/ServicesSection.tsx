@@ -58,7 +58,7 @@ const SERVICES = [
     bg:        "bg-pink-50",
     color:     "text-pink-600",
     category:  "สินค้า",
-    href:      "https://siambox.jongjongdi.com/zh",
+    href:      "https://www.siambox.shop/",
     image:     "/siambox-logo.png",
     imageContain: true,
     imageBg:   "bg-[#6e1f23]",
