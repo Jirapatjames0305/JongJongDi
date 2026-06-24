@@ -4,7 +4,7 @@
 // ============================================================
 
 const _IS_LOCAL = ['localhost', '127.0.0.1', ''].includes(location.hostname);
-const API       = _IS_LOCAL ? 'http://localhost:4000' : 'https://api.jongjongdi.com';
+const API       = 'https://api.jongjongdi.com';
 
 // ── Auth ─────────────────────────────────────────────────────
 

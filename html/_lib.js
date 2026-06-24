@@ -1,6 +1,6 @@
 // JongJongDi – Shared library (vanilla JS)
 const _IS_LOCAL = ['localhost', '127.0.0.1', ''].includes(location.hostname);
-const API       = _IS_LOCAL ? 'http://localhost:4000'        : 'https://api.jongjongdi.com';
+const API       = 'https://api.jongjongdi.com';
 const SITE_URL  = _IS_LOCAL ? 'http://localhost:3000'        : 'https://jongjongdi.com';
 const ADMIN_URL = _IS_LOCAL ? 'http://localhost:3001'        : 'https://admin.jongjongdi.com';
 const WATTANA_URL = _IS_LOCAL ? 'http://127.0.0.1:5500/html/wattana-garden/index' : 'https://wattana-garden.jongjongdi.com';

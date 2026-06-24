@@ -29,6 +29,8 @@ const PORT = Number(process.env.PORT ?? process.env.API_PORT ?? 4000);
 const allowedOrigins = [
   process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000",
   process.env.NEXT_PUBLIC_ADMIN_URL ?? "http://localhost:3001",
+  "http://127.0.0.1:5500",
+  "http://localhost:5500",
 ];
 
 app.use(cors({ origin: allowedOrigins }));
