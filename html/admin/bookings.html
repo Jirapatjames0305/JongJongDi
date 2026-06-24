@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>การจอง – JongJongDi Admin</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <script src="_lib.js"></script>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: Prompt, sans-serif; }
+    .table-wrap { overflow-x: auto; border-radius: 12px; border: 1px solid #e2e8f0; }
+    table { width: 100%; border-collapse: collapse; background: #fff; font-size: 14px; }
+    thead th { background: #f8fafc; padding: 11px 14px; text-align: left; font-weight: 600; color: #475569; font-size: 13px; border-bottom: 1px solid #e2e8f0; white-space: nowrap; }
+    tbody tr { border-bottom: 1px solid #f1f5f9; transition: background .12s; }
+    tbody tr:last-child { border-bottom: none; }
+    tbody tr:hover { background: #f8fafc; }
+    tbody td { padding: 12px 14px; vertical-align: middle; color: #334155; }
+    .mono { font-family: 'Courier New', monospace; font-size: 13px; font-weight: 600; color: #1e3a8a; letter-spacing: .5px; }
+    .btn-detail { display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; border-radius: 8px; background: #eff6ff; color: #2563eb; font-size: 13px; font-weight: 500; font-family: Prompt, sans-serif; border: 1px solid #bfdbfe; cursor: pointer; text-decoration: none; transition: background .12s; }
+    .btn-detail:hover { background: #dbeafe; }
+    .chip-warn { display: inline-flex; align-items: center; gap: 4px; margin-top: 4px; padding: 2px 8px; border-radius: 999px; background: #fff7ed; color: #c2410c; font-size: 11px; font-weight: 600; border: 1px solid #fed7aa; }
+    .tab-pill { display: inline-block; padding: 6px 14px; border-radius: 999px; font-size: 13px; font-weight: 500; cursor: pointer; border: none; font-family: Prompt, sans-serif; transition: background .12s, color .12s; }
+    .tab-pill.active { background: #2563eb; color: #fff; }
+    .tab-pill.inactive { background: transparent; color: #64748b; }
+    .tab-pill.inactive:hover { color: #334155; background: #f1f5f9; }
+    .spinner { display: inline-block; width: 32px; height: 32px; border: 3px solid #e2e8f0; border-top-color: #2563eb; border-radius: 50%; animation: spin .7s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .empty-state { text-align: center; padding: 60px 20px; color: #94a3b8; }
+    .empty-state i { font-size: 40px; margin-bottom: 12px; display: block; }
+    .page-btn { display: inline-flex; align-items: center; gap: 6px; padding: 7px 14px; border-radius: 8px; border: 1px solid #e2e8f0; background: #fff; color: #374151; font-size: 13px; font-family: Prompt, sans-serif; cursor: pointer; transition: background .12s; }
+    .page-btn:hover:not(:disabled) { background: #f1f5f9; }
+    .page-btn:disabled { opacity: .45; cursor: not-allowed; }
+  </style>
+</head>
+<body>
+<script>
+(function () {
+  var shell = renderAdminShell({ activePage: 'bookings.html' });
+  if (!shell) return;
+
+  var PAGE_SIZE = 20;
+  var currentStatus = '';
+  var currentPage = 1;
+  var totalItems = 0;
+
+  var STATUS_TABS = [
+    { label: 'ทั้งหมด',   value: '' },
+    { label: 'รอชำระ',    value: 'PENDING_PAYMENT' },
+    { label: 'รอยืนยัน', value: 'PENDING_CONFIRM' },
+    { label: 'ยืนยันแล้ว', value: 'CONFIRMED' },
+    { label: 'ยกเลิก',    value: 'CANCELLED' }
+  ];
+
+  var TYPE_LABEL = { ACCOMMODATION: 'ที่พัก', DIVE_TOUR: 'ดำน้ำ' };
+
+  function buildTabs() {
+    return STATUS_TABS.map(function (t) {
+      var active = t.value === currentStatus;
+      return '<button class="tab-pill ' + (active ? 'active' : 'inactive') + '" data-status="' + t.value + '">' + t.label + '</button>';
+    }).join('');
+  }
+
+  function renderShell() {
+    document.getElementById('page-content').innerHTML +=
+      '<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:20px">' +
+        '<div>' +
+          '<h1 id="pg-title" style="margin:0;font-size:22px;font-weight:700;color:#0f172a">การจอง</h1>' +
+          '<div id="pg-count" style="font-size:13px;color:#64748b;margin-top:2px"></div>' +
+        '</div>' +
+      '</div>' +
+      '<div style="background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:8px 10px;display:flex;flex-wrap:wrap;gap:4px;margin-bottom:16px" id="tab-row">' +
+        buildTabs() +
+      '</div>' +
+      '<div id="tbl-area"></div>' +
+      '<div id="pg-row" style="display:none;justify-content:center;align-items:center;gap:10px;margin-top:16px">' +
+        '<button class="page-btn" id="btn-prev"><i class="fa-solid fa-chevron-left"></i> ก่อนหน้า</button>' +
+        '<span id="pg-text" style="font-size:14px;color:#475569"></span>' +
+        '<button class="page-btn" id="btn-next">ถัดไป <i class="fa-solid fa-chevron-right"></i></button>' +
+      '</div>';
+
+    document.getElementById('tab-row').addEventListener('click', function (e) {
+      var btn = e.target.closest('[data-status]');
+      if (!btn) return;
+      currentStatus = btn.dataset.status;
+      currentPage = 1;
+      refreshTabs();
+      loadBookings();
+    });
+
+    document.getElementById('btn-prev').addEventListener('click', function () {
+      if (currentPage > 1) { currentPage--; loadBookings(); }
+    });
+    document.getElementById('btn-next').addEventListener('click', function () {
+      var total = Math.ceil(totalItems / PAGE_SIZE);
+      if (currentPage < total) { currentPage++; loadBookings(); }
+    });
+  }
+
+  function refreshTabs() {
+    document.getElementById('tab-row').innerHTML = buildTabs();
+    document.getElementById('tab-row').addEventListener('click', function (e) {
+      var btn = e.target.closest('[data-status]');
+      if (!btn) return;
+      currentStatus = btn.dataset.status;
+      currentPage = 1;
+      refreshTabs();
+      loadBookings();
+    });
+  }
+
+  function setLoading() {
+    document.getElementById('tbl-area').innerHTML =
+      '<div style="text-align:center;padding:60px 0"><div class="spinner"></div></div>';
+  }
+
+  function renderTable(bookings) {
+    if (!bookings || bookings.length === 0) {
+      document.getElementById('tbl-area').innerHTML =
+        '<div class="empty-state"><i class="fa-solid fa-calendar-xmark"></i>ไม่พบรายการจอง</div>';
+      return;
+    }
+
+    var rows = bookings.map(function (b) {
+      var name = b.room ? b.room.nameTh : (b.tourSchedule && b.tourSchedule.tour ? b.tourSchedule.tour.nameTh : '-');
+      var typeLabel = TYPE_LABEL[b.type] || b.type;
+      var hasPending = b.payments && b.payments.some(function (p) { return p.status === 'PENDING'; });
+
+      var statusCell = bookingStatusBadge(b.status);
+      if (b.status === 'PENDING_PAYMENT' && hasPending) {
+        statusCell += '<br><span class="chip-warn"><i class="fa-solid fa-triangle-exclamation"></i>รอสลิป</span>';
+      }
+
+      return '<tr>' +
+        '<td><span class="mono">' + b.bookingNumber + '</span></td>' +
+        '<td>' +
+          '<div style="font-weight:600;color:#0f172a">' + escHtml(b.guestName || '-') + '</div>' +
+          '<div style="font-size:12px;color:#64748b;margin-top:2px">' + escHtml(b.guestPhone || '') + '</div>' +
+        '</td>' +
+        '<td>' +
+          '<div style="font-weight:500;color:#0f172a">' + escHtml(name) + '</div>' +
+          '<div style="font-size:12px;color:#64748b;margin-top:2px">' + typeLabel + '</div>' +
+        '</td>' +
+        '<td>' + statusCell + '</td>' +
+        '<td style="font-weight:600;color:#0f172a;white-space:nowrap">฿' + fmt(b.totalAmount) + '</td>' +
+        '<td style="white-space:nowrap;color:#475569;font-size:13px">' + fmtDate(b.createdAt) + '</td>' +
+        '<td>' +
+          '<a class="btn-detail" href="booking-detail.html?num=' + encodeURIComponent(b.bookingNumber) + '">' +
+            '<i class="fa-solid fa-eye"></i>ดูรายละเอียด' +
+          '</a>' +
+        '</td>' +
+      '</tr>';
+    }).join('');
+
+    document.getElementById('tbl-area').innerHTML =
+      '<div class="table-wrap">' +
+        '<table>' +
+          '<thead><tr>' +
+            '<th>เลขจอง</th>' +
+            '<th>ผู้จอง</th>' +
+            '<th>ประเภท / รายการ</th>' +
+            '<th>สถานะ</th>' +
+            '<th>ยอด</th>' +
+            '<th>วันที่จอง</th>' +
+            '<th></th>' +
+          '</tr></thead>' +
+          '<tbody>' + rows + '</tbody>' +
+        '</table>' +
+      '</div>';
+  }
+
+  function updatePagination() {
+    var totalPages = Math.ceil(totalItems / PAGE_SIZE);
+    var pgRow = document.getElementById('pg-row');
+    if (totalPages > 1) {
+      pgRow.style.display = 'flex';
+      document.getElementById('pg-text').textContent = 'หน้า ' + currentPage + ' / ' + totalPages;
+      document.getElementById('btn-prev').disabled = currentPage <= 1;
+      document.getElementById('btn-next').disabled = currentPage >= totalPages;
+    } else {
+      pgRow.style.display = 'none';
+    }
+  }
+
+  function loadBookings() {
+    setLoading();
+    var qs = '?page=' + currentPage;
+    if (currentStatus) qs += '&status=' + encodeURIComponent(currentStatus);
+
+    adminGet('/api/bookings/admin/list' + qs).then(function (data) {
+      totalItems = data.total || 0;
+      var countEl = document.getElementById('pg-count');
+      if (countEl) countEl.textContent = 'ทั้งหมด ' + totalItems + ' รายการ';
+      renderTable(data.bookings || []);
+      updatePagination();
+    }).catch(function (err) {
+      document.getElementById('tbl-area').innerHTML =
+        '<div style="padding:40px;text-align:center;color:#dc2626">' +
+        '<i class="fa-solid fa-circle-exclamation" style="margin-right:8px"></i>' + escHtml(err.message) + '</div>';
+    });
+  }
+
+  function escHtml(s) {
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  renderShell();
+  loadBookings();
+})();
+</script>
+</body>
+</html>

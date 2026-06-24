@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>บัญชีธนาคาร – JongJongDi Admin</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Prompt', sans-serif; background: #f8fafc; color: #1e293b; }
+  </style>
+  <script src="_lib.js"></script>
+</head>
+<body>
+<script>
+(async function () {
+  renderAdminShell({ activePage: 'bank-accounts.html', requireSuperAdmin: true });
+  const content = document.getElementById('page-content');
+
+  let accounts = [];
+  let editingId = null;
+
+  const THAI_BANKS = [
+    'กสิกรไทย', 'ไทยพาณิชย์', 'กรุงเทพ', 'กรุงไทย',
+    'กรุงศรีอยุธยา', 'ทหารไทยธนชาต', 'ออมสิน'
+  ];
+
+  function renderList() {
+    const list = document.getElementById('bank-list');
+    if (!list) return;
+    if (!accounts.length) {
+      list.innerHTML = `<div style="text-align:center;padding:60px 20px;color:#94a3b8;">
+        <i class="fa-solid fa-building-columns" style="font-size:32px;color:#cbd5e1;display:block;margin-bottom:10px;"></i>ยังไม่มีบัญชีธนาคาร
+      </div>`;
+      return;
+    }
+    list.innerHTML = accounts.map(a => {
+      const activeBg = a.isActive ? '#dcfce7' : '#fee2e2';
+      const activeColor = a.isActive ? '#15803d' : '#dc2626';
+      const activeLabel = a.isActive ? 'แสดง' : 'ซ่อน';
+      return `<div style="background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:16px;display:flex;align-items:center;gap:14px;margin-bottom:10px;">
+        <div style="width:30px;text-align:center;font-size:13px;font-weight:700;color:#94a3b8;flex-shrink:0;">${a.order}</div>
+        <div style="width:44px;height:44px;background:#eff6ff;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+          <i class="fa-solid fa-building-columns" style="color:#2563eb;font-size:18px;"></i>
+        </div>
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:14px;font-weight:600;color:#1e293b;">${a.bankName}${a.branch ? ' · ' + a.branch : ''}</div>
+          <div style="font-size:13px;color:#475569;margin-top:2px;font-family:monospace;">${a.accountNumber}</div>
+          <div style="font-size:12px;color:#64748b;margin-top:1px;">${a.accountName}</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;">
+          <span style="background:${activeBg};color:${activeColor};padding:3px 10px;border-radius:999px;font-size:12px;font-weight:600;">${activeLabel}</span>
+          <button onclick="openModal(${a.id})" style="background:#eff6ff;color:#2563eb;border:none;padding:6px 12px;border-radius:7px;font-size:13px;font-family:Prompt,sans-serif;cursor:pointer;" title="แก้ไข">
+            <i class="fa-solid fa-pen"></i>
+          </button>
+          <button onclick="toggleVisible(${a.id},${a.isActive})" style="background:${a.isActive ? '#fef9c3' : '#f0fdf4'};color:${a.isActive ? '#a16207' : '#15803d'};border:none;padding:6px 12px;border-radius:7px;font-size:13px;font-family:Prompt,sans-serif;cursor:pointer;" title="${a.isActive ? 'ซ่อน' : 'แสดง'}">
+            <i class="fa-solid ${a.isActive ? 'fa-eye-slash' : 'fa-eye'}"></i>
+          </button>
+          <button onclick="deleteAccount(${a.id})" style="background:#fee2e2;color:#dc2626;border:none;padding:6px 12px;border-radius:7px;font-size:13px;font-family:Prompt,sans-serif;cursor:pointer;" title="ลบ">
+            <i class="fa-solid fa-trash"></i>
+          </button>
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  function buildPage() {
+    content.innerHTML = `
+      <!-- Header -->
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:24px;">
+        <div style="display:flex;align-items:center;gap:12px;">
+          <div style="width:44px;height:44px;background:#eff6ff;border-radius:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+            <i class="fa-solid fa-building-columns" style="color:#2563eb;font-size:20px;"></i>
+          </div>
+          <div>
+            <h1 style="font-size:20px;font-weight:700;color:#1e293b;line-height:1.2;">บัญชีธนาคาร</h1>
+            <div id="bank-count" style="font-size:13px;color:#64748b;"></div>
+          </div>
+        </div>
+        <button onclick="openModal(null)" style="background:#2563eb;color:#fff;border:none;padding:10px 20px;border-radius:10px;font-size:14px;font-weight:600;font-family:Prompt,sans-serif;cursor:pointer;display:flex;align-items:center;gap:8px;">
+          <i class="fa-solid fa-plus"></i> เพิ่มบัญชี
+        </button>
+      </div>
+
+      <!-- List -->
+      <div id="bank-list">
+        <div style="text-align:center;padding:60px;color:#94a3b8;">
+          <i class="fa-solid fa-circle-notch fa-spin" style="font-size:24px;color:#2563eb;"></i>
+        </div>
+      </div>
+
+      <!-- Modal -->
+      <div id="bank-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:500;align-items:center;justify-content:center;padding:20px;">
+        <div style="background:#fff;border-radius:20px;width:100%;max-width:500px;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.2);">
+          <div style="padding:24px;border-bottom:1px solid #e2e8f0;display:flex;align-items:center;justify-content:space-between;">
+            <h2 id="modal-title" style="font-size:17px;font-weight:700;color:#1e293b;"></h2>
+            <button onclick="closeModal()" style="background:none;border:none;font-size:20px;color:#94a3b8;cursor:pointer;line-height:1;">✕</button>
+          </div>
+          <form id="bank-form" onsubmit="submitForm(event)" style="padding:24px;display:flex;flex-direction:column;gap:18px;">
+            <div>
+              <label style="font-size:13px;font-weight:600;color:#374151;display:block;margin-bottom:6px;">ธนาคาร <span style="color:#dc2626;">*</span></label>
+              <input id="f-bank-name" type="text" list="bank-datalist" required placeholder="เลือกหรือพิมพ์ชื่อธนาคาร"
+                style="width:100%;padding:10px 14px;border:1px solid #d1d5db;border-radius:9px;font-family:Prompt,sans-serif;font-size:14px;outline:none;">
+              <datalist id="bank-datalist">
+                ${THAI_BANKS.map(b => `<option value="${b}">`).join('')}
+              </datalist>
+            </div>
+            <div>
+              <label style="font-size:13px;font-weight:600;color:#374151;display:block;margin-bottom:6px;">ชื่อบัญชี <span style="color:#dc2626;">*</span></label>
+              <input id="f-account-name" type="text" required placeholder="ชื่อบัญชีธนาคาร"
+                style="width:100%;padding:10px 14px;border:1px solid #d1d5db;border-radius:9px;font-family:Prompt,sans-serif;font-size:14px;outline:none;">
+            </div>
+            <div>
+              <label style="font-size:13px;font-weight:600;color:#374151;display:block;margin-bottom:6px;">เลขที่บัญชี <span style="color:#dc2626;">*</span></label>
+              <input id="f-account-number" type="text" required placeholder="เช่น 123-4-56789-0"
+                style="width:100%;padding:10px 14px;border:1px solid #d1d5db;border-radius:9px;font-family:monospace;font-size:14px;outline:none;">
+            </div>
+            <div>
+              <label style="font-size:13px;font-weight:600;color:#374151;display:block;margin-bottom:6px;">สาขา</label>
+              <input id="f-branch" type="text" placeholder="ชื่อสาขา (ถ้ามี)"
+                style="width:100%;padding:10px 14px;border:1px solid #d1d5db;border-radius:9px;font-family:Prompt,sans-serif;font-size:14px;outline:none;">
+            </div>
+            <div>
+              <label style="font-size:13px;font-weight:600;color:#374151;display:block;margin-bottom:6px;">ลำดับ</label>
+              <input id="f-order" type="number" min="1" step="1" placeholder="1"
+                style="width:100%;padding:10px 14px;border:1px solid #d1d5db;border-radius:9px;font-family:Prompt,sans-serif;font-size:14px;outline:none;">
+            </div>
+            <div style="display:flex;gap:10px;padding-top:4px;">
+              <button type="button" onclick="closeModal()" style="flex:1;padding:11px;border-radius:10px;border:1px solid #e2e8f0;background:#f8fafc;font-family:Prompt,sans-serif;font-size:14px;font-weight:600;color:#475569;cursor:pointer;">ยกเลิก</button>
+              <button type="submit" style="flex:2;padding:11px;border-radius:10px;border:none;background:#2563eb;color:#fff;font-family:Prompt,sans-serif;font-size:14px;font-weight:600;cursor:pointer;">
+                <i class="fa-solid fa-floppy-disk"></i> บันทึก
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    `;
+  }
+
+  window.openModal = function (id) {
+    editingId = id;
+    document.getElementById('modal-title').textContent = id ? 'แก้ไขบัญชี' : 'เพิ่มบัญชีใหม่';
+    document.getElementById('bank-form').reset();
+
+    if (id) {
+      const a = accounts.find(x => x.id === id);
+      if (!a) return;
+      document.getElementById('f-bank-name').value = a.bankName;
+      document.getElementById('f-account-name').value = a.accountName;
+      document.getElementById('f-account-number').value = a.accountNumber;
+      document.getElementById('f-branch').value = a.branch || '';
+      document.getElementById('f-order').value = a.order || '';
+    }
+
+    document.getElementById('bank-modal').style.display = 'flex';
+  };
+
+  window.closeModal = function () {
+    document.getElementById('bank-modal').style.display = 'none';
+    editingId = null;
+  };
+
+  window.submitForm = async function (e) {
+    e.preventDefault();
+    const btn = e.target.querySelector('[type=submit]');
+    btn.disabled = true;
+    const bankName = document.getElementById('f-bank-name').value.trim();
+    const accountName = document.getElementById('f-account-name').value.trim();
+    const accountNumber = document.getElementById('f-account-number').value.trim();
+    const branch = document.getElementById('f-branch').value.trim() || undefined;
+    const order = document.getElementById('f-order').value ? parseInt(document.getElementById('f-order').value) : undefined;
+
+    const body = { bankName, accountName, accountNumber };
+    if (branch) body.branch = branch;
+    if (order !== undefined) body.order = order;
+
+    try {
+      if (editingId) {
+        await adminPatch('/api/bank-accounts/' + editingId, body);
+        showToast('แก้ไขบัญชีสำเร็จ');
+      } else {
+        await adminPost('/api/bank-accounts', body);
+        showToast('เพิ่มบัญชีสำเร็จ');
+      }
+      closeModal();
+      await loadAccounts();
+    } catch (err) {
+      showToast(err.message || 'เกิดข้อผิดพลาด', 'error');
+    } finally {
+      btn.disabled = false;
+    }
+  };
+
+  window.toggleVisible = async function (id, current) {
+    try {
+      await adminPatch('/api/bank-accounts/' + id, { isActive: !current });
+      showToast(!current ? 'แสดงบัญชีแล้ว' : 'ซ่อนบัญชีแล้ว');
+      await loadAccounts();
+    } catch (err) {
+      showToast(err.message || 'เกิดข้อผิดพลาด', 'error');
+    }
+  };
+
+  window.deleteAccount = async function (id) {
+    const a = accounts.find(x => x.id === id);
+    if (!confirm(`ลบบัญชี "${a?.bankName} ${a?.accountNumber}" ใช่หรือไม่?`)) return;
+    try {
+      await adminDelete('/api/bank-accounts/' + id);
+      showToast('ลบบัญชีสำเร็จ');
+      await loadAccounts();
+    } catch (err) {
+      showToast(err.message || 'เกิดข้อผิดพลาด', 'error');
+    }
+  };
+
+  async function loadAccounts() {
+    try {
+      accounts = await adminGet('/api/bank-accounts/admin/list');
+    } catch (e) {
+      accounts = [];
+    }
+    const cnt = document.getElementById('bank-count');
+    if (cnt) cnt.textContent = 'บัญชีที่แสดงให้ลูกค้าโอนเงิน · ' + accounts.length + ' บัญชี';
+    renderList();
+  }
+
+  buildPage();
+  await loadAccounts();
+})();
+</script>
+</body>
+</html>

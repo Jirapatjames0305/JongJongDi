@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>เข้าสู่ระบบ – JongJongDi Admin</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: 'Prompt', sans-serif;
+      min-height: 100vh;
+      background: linear-gradient(135deg, #1e40af 0%, #0f172a 100%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 24px 16px;
+    }
+    .logo-area {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      margin-bottom: 28px;
+    }
+    .logo-icon {
+      width: 56px;
+      height: 56px;
+      background: #2563eb;
+      border-radius: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 10px;
+      box-shadow: 0 4px 20px rgba(37,99,235,0.45);
+    }
+    .logo-icon i { color: #fff; font-size: 26px; }
+    .logo-text {
+      color: #fff;
+      font-size: 20px;
+      font-weight: 700;
+      letter-spacing: .3px;
+    }
+    .card {
+      background: #fff;
+      border-radius: 20px;
+      box-shadow: 0 25px 50px rgba(0,0,0,0.25);
+      padding: 36px 32px;
+      width: 100%;
+      max-width: 400px;
+    }
+    .card h2 {
+      margin: 0 0 6px;
+      font-size: 22px;
+      font-weight: 700;
+      color: #0f172a;
+    }
+    .card .subtitle {
+      margin: 0 0 28px;
+      font-size: 14px;
+      color: #64748b;
+    }
+    label {
+      display: block;
+      font-size: 13px;
+      font-weight: 600;
+      color: #374151;
+      margin-bottom: 6px;
+    }
+    input[type="email"], input[type="password"], input[type="text"] {
+      width: 100%;
+      padding: 10px 14px;
+      border: 1.5px solid #e2e8f0;
+      border-radius: 10px;
+      font-family: 'Prompt', sans-serif;
+      font-size: 14px;
+      color: #0f172a;
+      outline: none;
+      transition: border-color .2s;
+      background: #f8fafc;
+    }
+    input:focus { border-color: #2563eb; background: #fff; }
+    .field { margin-bottom: 18px; }
+    .password-wrap { position: relative; }
+    .password-wrap input { padding-right: 44px; }
+    .pwd-toggle {
+      position: absolute;
+      right: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: #94a3b8;
+      font-size: 15px;
+      padding: 0;
+      display: flex;
+      align-items: center;
+    }
+    .pwd-toggle:hover { color: #2563eb; }
+    .error-box {
+      display: none;
+      background: #fee2e2;
+      border: 1px solid #fca5a5;
+      color: #dc2626;
+      border-radius: 10px;
+      padding: 10px 14px;
+      font-size: 13px;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+    }
+    .error-box.hidden { display: none; }
+    .btn-primary {
+      width: 100%;
+      padding: 12px;
+      background: #2563eb;
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      font-family: 'Prompt', sans-serif;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background .2s, opacity .2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      margin-top: 4px;
+    }
+    .btn-primary:hover { background: #1d4ed8; }
+    .btn-primary:disabled { opacity: .65; cursor: not-allowed; }
+    .link-row {
+      text-align: center;
+      margin-top: 20px;
+      font-size: 13px;
+      color: #64748b;
+    }
+    .link-row a { color: #2563eb; text-decoration: none; font-weight: 600; }
+    .link-row a:hover { text-decoration: underline; }
+    .spinner {
+      width: 16px;
+      height: 16px;
+      border: 2px solid rgba(255,255,255,0.4);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin .6s linear infinite;
+      display: none;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+
+  <div class="logo-area">
+    <div class="logo-icon"><i class="fa-solid fa-calendar-check"></i></div>
+    <div class="logo-text">JongJongDi Admin</div>
+  </div>
+
+  <div class="card">
+    <h2>เข้าสู่ระบบ</h2>
+    <p class="subtitle">จัดการที่พักและการจองของคุณ</p>
+
+    <div id="error-box" class="error-box hidden">
+      <i class="fa-solid fa-circle-exclamation" style="margin-top:1px;flex-shrink:0"></i>
+      <span id="error-msg"></span>
+    </div>
+
+    <form id="login-form" novalidate>
+      <div class="field">
+        <label for="email">อีเมล</label>
+        <input type="email" id="email" name="email" placeholder="you@example.com" required autocomplete="email" />
+      </div>
+      <div class="field">
+        <label for="password">รหัสผ่าน</label>
+        <div class="password-wrap">
+          <input type="password" id="password" name="password" placeholder="••••••••" required autocomplete="current-password" />
+          <button type="button" class="pwd-toggle" id="pwd-toggle" aria-label="แสดง/ซ่อนรหัสผ่าน">
+            <i class="fa-solid fa-eye" id="pwd-icon"></i>
+          </button>
+        </div>
+      </div>
+
+      <button type="submit" class="btn-primary" id="submit-btn">
+        <div class="spinner" id="spinner"></div>
+        <span id="btn-text">เข้าสู่ระบบ</span>
+      </button>
+    </form>
+
+    <div class="link-row">
+      ยังไม่มีบัญชี? <a href="register.html">สมัครสมาชิก</a>
+    </div>
+  </div>
+
+  <script src="_lib.js"></script>
+  <script>
+    // If already logged in, go to dashboard
+    (function () {
+      var s = getAdminSession();
+      if (s && s.token) location.href = 'dashboard.html';
+    })();
+
+    // Show/hide password
+    var pwdInput = document.getElementById('password');
+    var pwdIcon = document.getElementById('pwd-icon');
+    document.getElementById('pwd-toggle').addEventListener('click', function () {
+      var show = pwdInput.type === 'password';
+      pwdInput.type = show ? 'text' : 'password';
+      pwdIcon.className = show ? 'fa-solid fa-eye-slash' : 'fa-solid fa-eye';
+    });
+
+    // Form submit
+    document.getElementById('login-form').addEventListener('submit', async function (e) {
+      e.preventDefault();
+      var email = document.getElementById('email').value.trim();
+      var password = document.getElementById('password').value;
+
+      var errorBox = document.getElementById('error-box');
+      var errorMsg = document.getElementById('error-msg');
+      var spinner = document.getElementById('spinner');
+      var btnText = document.getElementById('btn-text');
+      var submitBtn = document.getElementById('submit-btn');
+
+      errorBox.classList.add('hidden');
+
+      // Basic validation
+      if (!email || !password) {
+        errorMsg.textContent = 'กรุณากรอกอีเมลและรหัสผ่าน';
+        errorBox.classList.remove('hidden');
+        return;
+      }
+
+      // Loading state
+      spinner.style.display = 'block';
+      btnText.textContent = 'กำลังเข้าสู่ระบบ...';
+      submitBtn.disabled = true;
+
+      try {
+        var res = await fetch(API + '/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: email, password: password })
+        });
+        var data = await res.json();
+        if (!res.ok) throw new Error(data.message || data.error || 'เข้าสู่ระบบไม่สำเร็จ');
+        saveAdminSession(data.token, data.operator);
+        location.href = 'dashboard.html';
+      } catch (err) {
+        errorMsg.textContent = err.message || 'เกิดข้อผิดพลาด กรุณาลองใหม่';
+        errorBox.classList.remove('hidden');
+        spinner.style.display = 'none';
+        btnText.textContent = 'เข้าสู่ระบบ';
+        submitBtn.disabled = false;
+      }
+    });
+  </script>
+</body>
+</html>

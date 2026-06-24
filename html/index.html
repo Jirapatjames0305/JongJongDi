@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>JongJongDi - จองจองดิ | จองง่าย ครบ จบที่เดียว</title>
+  <meta name="description" content="จองง่าย ครบ จบในที่เดียว! ที่พัก ทัวร์ดำน้ำ และบริการท่องเที่ยวที่คุณวางใจ">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script src="_lib.js"></script>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0;}
+    body{font-family:'Prompt',sans-serif;color:#334155;background:#f8fafc;-webkit-font-smoothing:antialiased;}
+    a{text-decoration:none;}
+    html{scroll-behavior:smooth;}
+    .container{max-width:1200px;margin:0 auto;padding:0 16px;}
+    @keyframes fadeInUp{from{opacity:0;transform:translateY(20px);}to{opacity:1;transform:translateY(0);}}
+    .fade-in{animation:fadeInUp .8s ease-out;}
+    .scrollbar-hide::-webkit-scrollbar{display:none;}
+    .scrollbar-hide{-ms-overflow-style:none;scrollbar-width:none;}
+    /* Mobile nav overlay */
+    @media(max-width:768px){
+      #nav-links{display:none!important;}
+      #mobile-menu{display:block!important;}
+    }
+  </style>
+</head>
+<body>
+
+<!-- ─── Hero ─────────────────────────────────────────────────────────────── -->
+<header id="home" style="position:relative;min-height:75vh;display:flex;flex-direction:column;justify-content:flex-end;overflow:hidden;padding-top:64px;">
+  <img src="https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=1600&q=80" alt="hero" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center;" onerror="this.style.display='none'">
+  <div style="position:absolute;inset:0;background:linear-gradient(to top,rgba(0,0,0,.7),rgba(0,0,0,.2),rgba(0,0,0,.1));"></div>
+
+  <!-- Text -->
+  <div style="position:relative;z-index:10;text-align:center;padding:0 16px 40px;margin-top:40px;" class="fade-in">
+    <div style="display:inline-flex;align-items:center;gap:8px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);border-radius:9999px;padding:6px 16px;font-size:12px;color:rgba(255,255,255,.9);margin-bottom:20px;backdrop-filter:blur(4px);">
+      <i class="fa-solid fa-location-dot" style="color:#f59e0b;"></i>
+      <span id="hero-location">ไทย · ทั่วโลก</span>
+    </div>
+    <h1 style="font-size:clamp(28px,5vw,56px);font-weight:700;color:#fff;line-height:1.15;margin-bottom:16px;text-shadow:0 2px 8px rgba(0,0,0,.3);" id="hero-title">
+      จองทุกอย่าง<br><span style="color:#f59e0b;">ครบจบในที่เดียว</span>
+    </h1>
+    <p id="hero-subtitle" style="color:rgba(255,255,255,.8);font-size:clamp(13px,2vw,16px);max-width:600px;margin:0 auto 32px;line-height:1.6;">
+      ที่พัก ทัวร์ดำน้ำ จองโต๊ะ จองคิว ตั๋วเดินทาง สั่งสินค้าไทย-จีน ส่งง่าย ได้ของชัวร์
+    </p>
+
+    <!-- Search Widget -->
+    <div style="max-width:760px;margin:0 auto;background:#fff;border-radius:20px;box-shadow:0 20px 60px rgba(0,0,0,.25);overflow:hidden;">
+      <!-- Service tabs -->
+      <div style="display:flex;border-bottom:1px solid #f1f5f9;overflow-x:auto;" id="service-tabs">
+        <!-- tabs injected by JS -->
+      </div>
+      <!-- Search row -->
+      <div style="padding:16px 20px;display:flex;flex-wrap:wrap;gap:8px;align-items:stretch;" id="search-row">
+        <!-- injected by JS -->
+      </div>
+      <!-- Trust badges -->
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;padding:12px 20px 16px;border-top:1px solid #f8fafc;background:#fafbfc;" id="trust-badges">
+        <!-- injected by JS -->
+      </div>
+    </div>
+  </div>
+</header>
+
+<!-- ─── Services ─────────────────────────────────────────────────────────── -->
+<section id="services" style="padding:48px 0;background:#fff;">
+  <div class="container">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:32px;">
+      <div>
+        <h2 id="services-title" style="font-size:clamp(18px,3vw,28px);font-weight:700;color:#1e293b;">บริการของเรา</h2>
+        <div style="width:40px;height:4px;background:#2563eb;margin-top:8px;border-radius:9999px;"></div>
+      </div>
+      <a href="rooms.html" id="services-viewall" style="font-size:13px;color:#2563eb;font-weight:600;display:flex;align-items:center;gap:4px;">ดูทั้งหมด <i class="fa-solid fa-chevron-right" style="font-size:10px;"></i></a>
+    </div>
+    <div id="services-grid" style="display:grid;grid-template-columns:repeat(6,1fr);gap:12px;">
+      <!-- injected by JS -->
+    </div>
+  </div>
+</section>
+
+<!-- ─── Trending ──────────────────────────────────────────────────────────── -->
+<section id="promotions" style="padding:48px 0;background:#f8fafc;border-top:1px solid #f1f5f9;border-bottom:1px solid #f1f5f9;">
+  <div class="container">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:32px;">
+      <div>
+        <h2 id="trending-title" style="font-size:clamp(18px,3vw,28px);font-weight:700;color:#1e293b;">ฮิตติดกระแส</h2>
+        <div style="width:40px;height:4px;background:#f59e0b;margin-top:8px;border-radius:9999px;"></div>
+      </div>
+    </div>
+    <div id="trending-grid" style="display:flex;overflow-x:auto;gap:16px;padding-bottom:8px;" class="scrollbar-hide">
+      <div style="text-align:center;color:#94a3b8;padding:32px 0;width:100%;"><i class="fa-solid fa-circle-notch fa-spin" style="font-size:24px;"></i></div>
+    </div>
+  </div>
+</section>
+
+<!-- ─── Products ─────────────────────────────────────────────────────────── -->
+<section id="products" style="padding:48px 0;">
+  <div class="container">
+    <div style="margin-bottom:32px;">
+      <h2 id="products-title" style="font-size:clamp(18px,3vw,28px);font-weight:700;color:#1e293b;">สินค้าแนะนำ</h2>
+      <p id="products-subtitle" style="font-size:13px;color:#64748b;margin-top:4px;">สินค้าไทย-จีน คัดสรรส่งตรงถึงคุณ</p>
+      <div style="width:40px;height:4px;background:#f59e0b;margin-top:8px;border-radius:9999px;"></div>
+    </div>
+    <div id="products-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:20px;">
+      <div style="text-align:center;color:#94a3b8;padding:32px 0;grid-column:1/-1;"><i class="fa-solid fa-circle-notch fa-spin" style="font-size:24px;"></i></div>
+    </div>
+  </div>
+</section>
+
+<!-- ─── B2B ────────────────────────────────────────────────────────────────── -->
+<section id="system" style="padding:56px 0;background:#0f172a;color:#fff;position:relative;overflow:hidden;">
+  <i class="fa-solid fa-chart-line" style="position:absolute;top:40px;left:40px;font-size:128px;color:rgba(255,255,255,.05);pointer-events:none;"></i>
+  <div class="container" style="position:relative;z-index:1;">
+    <div style="display:flex;flex-wrap:wrap;align-items:center;gap:40px;">
+      <!-- Left -->
+      <div style="flex:1;min-width:280px;">
+        <span id="b2b-badge" style="color:#f59e0b;font-weight:700;font-size:11px;letter-spacing:.1em;text-transform:uppercase;display:block;margin-bottom:12px;">สำหรับเจ้าของธุรกิจ</span>
+        <h2 id="b2b-title" style="font-size:clamp(22px,4vw,40px);font-weight:700;line-height:1.25;margin-bottom:16px;">บริหารจัดการธุรกิจง่ายขึ้น<br>ด้วยระบบจองอัตโนมัติ</h2>
+        <p id="b2b-subtitle" style="color:#94a3b8;font-size:15px;margin-bottom:24px;max-width:480px;line-height:1.6;">ลดความผิดพลาด เพิ่มยอดขายด้วย JongJongDi System ระบบจัดการคิวและออเดอร์ Real-time พร้อมสรุปยอดขายทันที</p>
+        <ul id="b2b-features" style="list-style:none;margin-bottom:28px;display:flex;flex-direction:column;gap:12px;">
+          <li style="display:flex;align-items:center;gap:12px;font-size:14px;"><i class="fa-solid fa-check-circle" style="color:#4ade80;"></i>เปิดรับจองได้ตลอด 24 ชั่วโมง</li>
+          <li style="display:flex;align-items:center;gap:12px;font-size:14px;"><i class="fa-solid fa-check-circle" style="color:#4ade80;"></i>รองรับ QR Code และตัดบัตรเครดิต</li>
+          <li style="display:flex;align-items:center;gap:12px;font-size:14px;"><i class="fa-solid fa-check-circle" style="color:#4ade80;"></i>Dashboard ดูยอดขายรายวันแบบ Real-time</li>
+        </ul>
+        <a id="b2b-cta" href="mailto:puangkasem@gmail.com?subject=สนใจระบบจอง JongJongDi - ขอใบเสนอราคา" style="display:inline-flex;align-items:center;gap:8px;padding:12px 28px;background:#f59e0b;color:#fff;border-radius:10px;font-weight:700;font-size:14px;">
+          <i class="fa-solid fa-envelope"></i>ขอใบเสนอราคา / สนใจระบบ
+        </a>
+      </div>
+      <!-- Right: Dashboard Mockup -->
+      <div style="flex:1;min-width:280px;max-width:440px;">
+        <div style="background:rgba(255,255,255,.1);backdrop-filter:blur(8px);border-radius:20px;padding:20px;border:1px solid rgba(255,255,255,.1);box-shadow:0 20px 50px rgba(0,0,0,.3);">
+          <div style="background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 4px 16px rgba(0,0,0,.2);">
+            <div style="background:#f8fafc;padding:10px 12px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:6px;">
+              <div style="display:flex;gap:5px;"><div style="width:10px;height:10px;background:#f87171;border-radius:50%;"></div><div style="width:10px;height:10px;background:#fbbf24;border-radius:50%;"></div><div style="width:10px;height:10px;background:#4ade80;border-radius:50%;"></div></div>
+              <div style="font-size:10px;color:#94a3b8;font-family:monospace;margin-left:8px;">dashboard.jongjongdi.com</div>
+            </div>
+            <div style="padding:24px;">
+              <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:24px;">
+                <div>
+                  <div id="b2b-today" style="font-size:12px;color:#64748b;">ยอดจองวันนี้</div>
+                  <div style="font-size:28px;font-weight:700;color:#1e293b;">128 <span style="font-size:14px;font-weight:400;color:#94a3b8;" id="b2b-unit">รายการ</span></div>
+                </div>
+                <div style="background:#dcfce7;color:#16a34a;font-size:12px;padding:4px 10px;border-radius:6px;font-weight:700;">+12%</div>
+              </div>
+              <div style="display:flex;align-items:flex-end;gap:6px;height:96px;">
+                <div style="flex:1;background:#eff6ff;border-radius:4px 4px 0 0;" style="height:50%;"></div>
+                <div style="flex:1;background:#dbeafe;height:67%;border-radius:4px 4px 0 0;"></div>
+                <div style="flex:1;background:#bfdbfe;height:33%;border-radius:4px 4px 0 0;"></div>
+                <div style="flex:1;background:#2563eb;height:100%;border-radius:4px 4px 0 0;"></div>
+                <div style="flex:1;background:#bfdbfe;height:75%;border-radius:4px 4px 0 0;"></div>
+                <div style="flex:1;background:#dbeafe;height:50%;border-radius:4px 4px 0 0;"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<script>
+const SERVICES_DATA = [
+  { icon:'fa-hotel',        grad:'from-blue-400 to-blue-600',   bg:'#eff6ff', color:'#2563eb', category:'ที่พัก',     href:'rooms.html',                 image:'https://images.unsplash.com/photo-1571896349842-33c89424de2d?w=400&q=80', labelKey:t.services.room.label,     descKey:t.services.room.desc },
+  { icon:'fa-water-ladder', grad:'from-cyan-400 to-teal-600',   bg:'#ecfeff', color:'#0891b2', category:'ทัวร์',      href:'tours.html',                 image:'https://images.unsplash.com/photo-1544551763-46a013bb70d5?w=400&q=80', labelKey:t.services.dive.label,     descKey:t.services.dive.desc },
+  { icon:'fa-utensils',     grad:'from-orange-400 to-red-500',  bg:'#fff7ed', color:'#ea580c', category:'ร้านอาหาร', href:null,  disabled:true,         image:null, labelKey:t.services.restaurant.label, descKey:t.services.restaurant.desc },
+  { icon:'fa-user-clock',   grad:'from-green-400 to-emerald-600',bg:'#f0fdf4',color:'#16a34a', category:'คิวบริการ', href:null,  disabled:true,         image:null, labelKey:t.services.queue.label,     descKey:t.services.queue.desc },
+  { icon:'fa-ticket',       grad:'from-purple-400 to-violet-600',bg:'#faf5ff',color:'#7c3aed', category:'ตั๋วเข้าชม',href:null, disabled:true,         image:null, labelKey:t.services.ticket.label,   descKey:t.services.ticket.desc },
+  { icon:'fa-bag-shopping', grad:'from-pink-400 to-rose-500',   bg:'#fff1f2', color:'#e11d48', category:'สินค้า',     href:'https://www.siambox.shop/', image:'/siambox-logo.png', imageBg:'#6e1f23', imageContain:true, labelKey:t.services.product.label,  descKey:t.services.product.desc },
+];
+
+const TRUST_BADGES = [
+  { icon:'fa-tag',          badge:t.hero.badge1, sub:t.hero.badge1s },
+  { icon:'fa-shield-halved',badge:t.hero.badge2, sub:t.hero.badge2s },
+  { icon:'fa-lock',         badge:t.hero.badge3, sub:t.hero.badge3s },
+  { icon:'fa-headset',      badge:t.hero.badge4, sub:t.hero.badge4s },
+];
+
+const SERVICE_TABS = [
+  { icon:'fa-hotel',        labelKey:t.services.room.label,     href:'rooms.html', active:true },
+  { icon:'fa-water-ladder', labelKey:t.services.dive.label,     href:'tours.html', active:true },
+  { icon:'fa-utensils',     labelKey:t.services.restaurant.label, href:null, active:false },
+  { icon:'fa-user-clock',   labelKey:t.services.queue.label,    href:null, active:false },
+  { icon:'fa-ticket',       labelKey:t.services.ticket.label,   href:null, active:false },
+];
+
+let activeTab = 0;
+let searchQ = '', checkIn = '', checkOut = '', tourDate = '';
+
+function getToday() { return new Date().toISOString().slice(0,10); }
+
+function renderSearchWidget() {
+  const lang = getLang();
+  const tab = SERVICE_TABS[activeTab];
+
+  // Tabs
+  document.getElementById('service-tabs').innerHTML = SERVICE_TABS.map((s, i) => `
+    <button onclick="setTab(${i})" style="flex-shrink:0;display:flex;flex-direction:column;align-items:center;gap:4px;padding:14px 24px;font-size:11px;font-weight:500;border:none;background:none;cursor:pointer;border-bottom:2px solid ${activeTab===i?'#2563eb':'transparent'};color:${activeTab===i?'#2563eb':'#64748b'};min-width:70px;${!s.active?'opacity:.5;':''}" ${!s.active?'disabled':''}>
+      <i class="fa-solid ${s.icon}" style="font-size:18px;"></i>
+      <span style="white-space:nowrap;">${tx(s.labelKey, lang)}</span>
+      ${!s.active?`<span style="font-size:9px;color:#94a3b8;margin-top:-2px;">${tx(t.services.comingSoon, lang)}</span>`:''}
+    </button>
+  `).join('');
+
+  // Search row
+  let dateFields = '';
+  if (tab.href === 'rooms.html') {
+    dateFields = `
+      <label style="display:flex;align-items:center;gap:8px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:8px 14px;cursor:pointer;min-width:140px;">
+        <i class="fa-solid fa-calendar-check" style="color:#94a3b8;font-size:14px;flex-shrink:0;"></i>
+        <span style="display:flex;flex-direction:column;flex:1;">
+          <span style="font-size:10px;color:#94a3b8;">${tx(t.hero.checkIn, lang)}</span>
+          <input type="date" id="ci-input" value="${checkIn}" min="${getToday()}" onchange="checkIn=this.value;if(checkOut&&checkOut<=checkIn)checkOut='';document.getElementById('co-input')&&(document.getElementById('co-input').value='')" style="background:none;border:none;outline:none;font-size:13px;color:#334155;font-family:inherit;width:100%;">
+        </span>
+      </label>
+      <label style="display:flex;align-items:center;gap:8px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:8px 14px;cursor:pointer;min-width:140px;">
+        <i class="fa-solid fa-calendar-xmark" style="color:#94a3b8;font-size:14px;flex-shrink:0;"></i>
+        <span style="display:flex;flex-direction:column;flex:1;">
+          <span style="font-size:10px;color:#94a3b8;">${tx(t.hero.checkOut, lang)}</span>
+          <input type="date" id="co-input" value="${checkOut}" min="${checkIn||getToday()}" onchange="checkOut=this.value" style="background:none;border:none;outline:none;font-size:13px;color:#334155;font-family:inherit;width:100%;">
+        </span>
+      </label>`;
+  } else if (tab.href === 'tours.html') {
+    dateFields = `
+      <label style="display:flex;align-items:center;gap:8px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:8px 14px;cursor:pointer;min-width:160px;">
+        <i class="fa-solid fa-calendar-day" style="color:#94a3b8;font-size:14px;flex-shrink:0;"></i>
+        <span style="display:flex;flex-direction:column;flex:1;">
+          <span style="font-size:10px;color:#94a3b8;">${tx(t.hero.departDate, lang)}</span>
+          <input type="date" value="${tourDate}" min="${getToday()}" onchange="tourDate=this.value" style="background:none;border:none;outline:none;font-size:13px;color:#334155;font-family:inherit;width:100%;">
+        </span>
+      </label>`;
+  }
+
+  document.getElementById('search-row').innerHTML = `
+    <div style="flex:1;display:flex;align-items:center;gap:8px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:10px 14px;min-width:200px;">
+      <i class="fa-solid fa-location-dot" style="color:#94a3b8;font-size:14px;flex-shrink:0;"></i>
+      <input type="text" id="search-q" value="${searchQ}" onchange="searchQ=this.value" onkeydown="if(event.key==='Enter')doSearch()" placeholder="${tx(t.hero.searchPh, lang)}" style="flex:1;background:none;border:none;outline:none;font-size:14px;color:#334155;font-family:inherit;placeholder-color:#94a3b8;">
+    </div>
+    ${dateFields}
+    <button onclick="doSearch()" style="padding:10px 24px;background:#2563eb;color:#fff;border:none;border-radius:12px;font-weight:600;font-size:14px;cursor:pointer;white-space:nowrap;box-shadow:0 4px 12px rgba(37,99,235,.3);">
+      <i class="fa-solid fa-magnifying-glass" style="margin-right:6px;"></i>${tx(t.hero.searchBtn, lang)}
+    </button>`;
+
+  // Trust badges
+  document.getElementById('trust-badges').innerHTML = TRUST_BADGES.map(b => `
+    <div style="display:flex;align-items:center;gap:8px;min-height:44px;">
+      <div style="width:28px;height:28px;border-radius:50%;background:#eff6ff;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+        <i class="fa-solid ${b.icon}" style="color:#2563eb;font-size:11px;"></i>
+      </div>
+      <div>
+        <div style="font-weight:600;font-size:11px;color:#334155;line-height:1.2;">${tx(b.badge, lang)}</div>
+        <div style="font-size:10px;color:#94a3b8;line-height:1.2;">${tx(b.sub, lang)}</div>
+      </div>
+    </div>`).join('');
+}
+
+function setTab(i) {
+  activeTab = i;
+  renderSearchWidget();
+}
+
+function doSearch() {
+  const tab = SERVICE_TABS[activeTab];
+  if (!tab.active || !tab.href) return;
+  searchQ = document.getElementById('search-q')?.value || searchQ;
+  const p = new URLSearchParams();
+  if (searchQ.trim()) p.set('q', searchQ.trim());
+  if (tab.href === 'rooms.html') {
+    if (checkIn) p.set('checkIn', checkIn);
+    if (checkOut) p.set('checkOut', checkOut);
+  } else if (tab.href === 'tours.html') {
+    if (tourDate) p.set('date', tourDate);
+  }
+  window.location.href = p.toString() ? `${tab.href}?${p}` : tab.href;
+}
+
+function renderServices() {
+  const lang = getLang();
+  document.getElementById('services-title').textContent = tx(t.services.title, lang);
+  document.getElementById('services-viewall').innerHTML = tx(t.services.viewAll, lang) + ' <i class="fa-solid fa-chevron-right" style="font-size:10px;"></i>';
+  document.getElementById('services-grid').innerHTML = SERVICES_DATA.map(s => {
+    const label = tx(s.labelKey, lang);
+    const desc = tx(s.descKey, lang);
+    const isDisabled = s.disabled;
+    const content = `
+      <div style="position:relative;height:${s.image?112:112}px;${s.image?`background:${s.imageBg||'transparent'};`:`background:linear-gradient(135deg,${s.grad?.replace('from-','')||'#ddd'});`}overflow:hidden;display:flex;align-items:center;justify-content:center;">
+        ${s.image ? `<img src="${s.image}" alt="${label}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:${s.imageContain?'contain;padding:12px':'cover'};">` : `<i class="fa-solid ${s.icon}" style="font-size:40px;color:rgba(255,255,255,.6);"></i>`}
+        ${isDisabled?`<span style="position:absolute;top:8px;right:8px;font-size:9px;background:rgba(0,0,0,.3);color:#fff;padding:2px 8px;border-radius:9999px;backdrop-filter:blur(4px);">${tx(t.services.comingSoon, lang)}</span>`:''}
+      </div>
+      <div style="padding:10px;text-align:center;">
+        <h3 style="font-weight:700;font-size:12px;color:#1e293b;">${label}</h3>
+      </div>`;
+    const base = `border-radius:12px;overflow:hidden;border:1px solid #f1f5f9;box-shadow:0 1px 4px rgba(0,0,0,.06);`;
+    if (isDisabled) return `<div style="${base}opacity:.6;cursor:not-allowed;">${content}</div>`;
+    return `<a href="${s.href}" style="${base}display:block;transition:.2s;" onmouseover="this.style.boxShadow='0 8px 20px rgba(0,0,0,.12)';this.style.transform='translateY(-2px)'" onmouseout="this.style.boxShadow='0 1px 4px rgba(0,0,0,.06)';this.style.transform=''">${content}</a>`;
+  }).join('');
+}
+
+async function renderTrending() {
+  const lang = getLang();
+  const cards = await listTrending();
+  if (!cards.length) { document.getElementById('promotions').style.display = 'none'; return; }
+
+  const html = cards.map(card => {
+    const link = card.link.startsWith('/products/') ? resolveProductLink(card.link) : (card.link.startsWith('/rooms/') ? `room.html?slug=${card.link.replace('/rooms/','')}` : (card.link.startsWith('/tours/') ? `tour.html?slug=${card.link.replace('/tours/','')}` : card.link));
+    const fallback = card.kind === 'PRODUCT' ? { grad:'linear-gradient(135deg,#fde68a,#f97316)', icon:'fa-seedling' } : card.kind === 'TOUR' ? { grad:'linear-gradient(135deg,#a5f3fc,#3b82f6)', icon:'fa-water-ladder' } : { grad:'linear-gradient(135deg,#a5f3fc,#3b82f6)', icon:'fa-mountain-sun' };
+    return `<a href="${link}" style="flex-shrink:0;width:75vw;max-width:300px;border-radius:16px;overflow:hidden;box-shadow:0 4px 16px rgba(0,0,0,.1);display:block;transition:.3s;" onmouseover="this.style.boxShadow='0 12px 32px rgba(0,0,0,.18)'" onmouseout="this.style.boxShadow='0 4px 16px rgba(0,0,0,.1)'">
+      <div style="height:200px;position:relative;${card.imageUrl?`background:url('${card.imageUrl}') center/cover`:`background:${fallback.grad}`}">
+        ${!card.imageUrl?`<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;"><i class="fa-solid ${fallback.icon}" style="font-size:64px;color:rgba(255,255,255,.3);"></i></div>`:''}
+        <div style="position:absolute;inset:0;background:linear-gradient(to top,rgba(0,0,0,.8),rgba(0,0,0,.3),transparent);"></div>
+        ${card.badge?`<div style="position:absolute;top:12px;left:12px;background:#ef4444;color:#fff;font-size:10px;font-weight:700;padding:4px 10px;border-radius:9999px;"><i class="fa-solid fa-star" style="color:#fcd34d;margin-right:4px;"></i>${card.badge}</div>`:''}
+        <div style="position:absolute;bottom:0;left:0;right:0;padding:16px;">
+          ${card.location?`<span style="background:rgba(255,255,255,.2);backdrop-filter:blur(4px);color:#fff;font-size:11px;padding:3px 8px;border-radius:9999px;display:inline-block;margin-bottom:8px;"><i class="fa-solid fa-location-dot" style="color:#f87171;margin-right:4px;"></i>${card.location}</span>`:''}
+          <h3 style="font-weight:700;color:#fff;font-size:15px;line-height:1.3;margin-bottom:8px;">${card.title}</h3>
+          <div style="display:flex;align-items:flex-end;justify-content:space-between;">
+            <div>
+              ${card.oldPrice?`<div style="color:rgba(255,255,255,.5);font-size:12px;text-decoration:line-through;">${fmt(card.oldPrice)}.-</div>`:''}
+              <div style="color:#f59e0b;font-weight:700;font-size:20px;">${fmt(card.price)}.- ${card.unitLabel?`<span style="font-size:12px;color:rgba(255,255,255,.6);font-weight:400;">${card.unitLabel}</span>`:''}</div>
+            </div>
+            <span style="background:${card.kind==='PRODUCT'?'#2563eb':'#fff'};color:${card.kind==='PRODUCT'?'#fff':'#2563eb'};padding:6px 16px;border-radius:10px;font-size:12px;font-weight:600;">${card.ctaLabel}</span>
+          </div>
+        </div>
+      </div>
+    </a>`;
+  }).join('');
+
+  document.getElementById('trending-grid').innerHTML = html;
+  document.getElementById('trending-title').textContent = tx(t.trending.title, lang);
+}
+
+async function renderProducts() {
+  const lang = getLang();
+  const products = await listProducts();
+  if (!products.length) { document.getElementById('products').style.display = 'none'; return; }
+  document.getElementById('products-title').textContent = tx(t.productList.title, lang);
+  document.getElementById('products-subtitle').textContent = tx(t.productList.subtitle, lang);
+  document.getElementById('products-grid').innerHTML = products.map(p => productCardHTML(p, lang)).join('');
+}
+
+function renderB2B() {
+  const lang = getLang();
+  document.getElementById('b2b-badge').textContent = tx(t.b2b.badge, lang);
+  document.getElementById('b2b-title').innerHTML = tx(t.b2b.title1, lang) + '<br>' + tx(t.b2b.title2, lang);
+  document.getElementById('b2b-subtitle').textContent = tx(t.b2b.subtitle, lang);
+  document.getElementById('b2b-cta').innerHTML = `<i class="fa-solid fa-envelope"></i>${tx(t.b2b.cta, lang)}`;
+  document.getElementById('b2b-features').innerHTML = [t.b2b.f1, t.b2b.f2, t.b2b.f3].map(f => `<li style="display:flex;align-items:center;gap:12px;font-size:14px;"><i class="fa-solid fa-check-circle" style="color:#4ade80;"></i>${tx(f, lang)}</li>`).join('');
+  document.getElementById('b2b-today').textContent = tx(t.b2b.todayOrders, lang);
+  document.getElementById('b2b-unit').textContent = tx(t.b2b.unit, lang);
+}
+
+function renderHero() {
+  const lang = getLang();
+  document.getElementById('hero-location').textContent = lang === 'th' ? 'ไทย · ทั่วโลก' : 'Thailand · Worldwide';
+  document.getElementById('hero-title').innerHTML = tx(t.hero.title, lang) + '<br><span style="color:#f59e0b;">' + tx(t.hero.titleHl, lang) + '</span>';
+  document.getElementById('hero-subtitle').textContent = tx(t.hero.subtitle, lang);
+}
+
+// ─── Init ─────────────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  document.body.insertBefore(renderNavbar(), document.body.firstChild);
+  document.body.appendChild(renderFooter());
+
+  renderHero();
+  renderSearchWidget();
+  renderServices();
+  renderB2B();
+  renderTrending();
+  renderProducts();
+});
+</script>
+
+<!-- Responsive grid for services -->
+<style>
+@media(max-width:640px){
+  #services-grid{grid-template-columns:repeat(3,1fr)!important;}
+  #trust-badges{grid-template-columns:repeat(2,1fr)!important;}
+  #trending-grid a{width:75vw!important;}
+  #b2b-features li{font-size:13px!important;}
+}
+</style>
+</body>
+</html>

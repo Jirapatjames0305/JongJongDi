@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>วันว่าง/ปิด – JongJongDi Admin</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Prompt', sans-serif; background: #f8fafc; color: #1e293b; }
+  </style>
+  <script src="_lib.js"></script>
+</head>
+<body>
+<script>
+(async function () {
+  renderAdminShell({ activePage: 'availability.html' });
+  const content = document.getElementById('page-content');
+
+  let blocks = [];
+  let rooms = [], tours = [];
+
+  function fmtDateShort(d) {
+    if (!d) return '—';
+    return new Date(d).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: '2-digit' });
+  }
+
+  function getTargetName(b) {
+    if (b.targetType === 'ROOM') return b.room?.nameTh || '—';
+    return b.tour?.nameTh || '—';
+  }
+
+  function renderBlocks() {
+    const list = document.getElementById('blocks-list');
+    if (!list) return;
+    if (!blocks.length) {
+      list.innerHTML = `<div style="text-align:center;padding:60px 20px;color:#94a3b8;">
+        <i class="fa-solid fa-ban" style="font-size:32px;color:#cbd5e1;display:block;margin-bottom:10px;"></i>ยังไม่มีการ Block วัน
+      </div>`;
+      return;
+    }
+    list.innerHTML = blocks.map(b => {
+      const isRoom = b.targetType === 'ROOM';
+      const iconBg = isRoom ? '#eff6ff' : '#ccfbf1';
+      const iconColor = isRoom ? '#2563eb' : '#0f766e';
+      const icon = isRoom ? 'fa-bed' : 'fa-water-ladder';
+      const name = getTargetName(b);
+
+      return `<div style="display:flex;align-items:center;gap:14px;padding:14px;border-bottom:1px solid #f1f5f9;">
+        <div style="width:44px;height:44px;border-radius:12px;background:${iconBg};display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+          <i class="fa-solid ${icon}" style="color:${iconColor};font-size:18px;"></i>
+        </div>
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:14px;font-weight:600;color:#1e293b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${name}</div>
+          <div style="font-size:12px;color:#64748b;margin-top:2px;">
+            ${fmtDateShort(b.startDate)} – ${fmtDateShort(b.endDate)}
+            ${b.reason ? ` · <span style="color:#94a3b8;">${b.reason}</span>` : ''}
+          </div>
+        </div>
+        <button onclick="deleteBlock(${b.id})" style="background:#fee2e2;color:#dc2626;border:none;padding:6px 12px;border-radius:7px;font-size:13px;font-family:Prompt,sans-serif;cursor:pointer;flex-shrink:0;" title="ลบ">
+          <i class="fa-solid fa-trash"></i>
+        </button>
+      </div>`;
+    }).join('');
+  }
+
+  function setTargetType(type) {
+    document.getElementById('f-target-type').value = type;
+    const btnR = document.getElementById('btn-avail-room');
+    const btnT = document.getElementById('btn-avail-tour');
+    if (type === 'ROOM') {
+      btnR.style.border = '2px solid #2563eb'; btnR.style.background = '#eff6ff'; btnR.style.color = '#2563eb';
+      btnT.style.border = '2px solid #e2e8f0'; btnT.style.background = '#fff'; btnT.style.color = '#64748b';
+    } else {
+      btnT.style.border = '2px solid #2563eb'; btnT.style.background = '#eff6ff'; btnT.style.color = '#2563eb';
+      btnR.style.border = '2px solid #e2e8f0'; btnR.style.background = '#fff'; btnR.style.color = '#64748b';
+    }
+    const sel = document.getElementById('f-target-id');
+    if (!sel) return;
+    const src = type === 'ROOM' ? rooms : tours;
+    sel.innerHTML = '<option value="">— เลือก —</option>' +
+      src.map(x => `<option value="${x.id}">${x.nameTh}</option>`).join('');
+  }
+
+  window.setAvailTargetType = setTargetType;
+
+  function buildPage() {
+    content.innerHTML = `
+      <!-- Header -->
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:24px;">
+        <div style="width:44px;height:44px;background:#fee2e2;border-radius:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+          <i class="fa-solid fa-ban" style="color:#dc2626;font-size:20px;"></i>
+        </div>
+        <div>
+          <h1 style="font-size:20px;font-weight:700;color:#1e293b;line-height:1.2;">วันว่าง / ปิดรับจอง</h1>
+          <div id="block-count" style="font-size:13px;color:#64748b;"></div>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 2fr;gap:20px;align-items:start;">
+
+        <!-- LEFT: Form -->
+        <div style="background:#fff;border:1px solid #e2e8f0;border-radius:16px;padding:24px;position:sticky;top:20px;">
+          <h2 style="font-size:15px;font-weight:700;color:#1e293b;margin-bottom:18px;">Block วันใหม่</h2>
+          <form id="avail-form" onsubmit="submitBlock(event)" style="display:flex;flex-direction:column;gap:16px;">
+            <div>
+              <label style="font-size:13px;font-weight:600;color:#374151;display:block;margin-bottom:8px;">ประเภท <span style="color:#dc2626;">*</span></label>
+              <div style="display:flex;gap:8px;">
+                <button type="button" id="btn-avail-room" onclick="setAvailTargetType('ROOM')"
+                  style="flex:1;padding:8px;border-radius:9px;border:2px solid #2563eb;background:#eff6ff;color:#2563eb;font-family:Prompt,sans-serif;font-size:13px;font-weight:600;cursor:pointer;">ที่พัก</button>
+                <button type="button" id="btn-avail-tour" onclick="setAvailTargetType('TOUR')"
+                  style="flex:1;padding:8px;border-radius:9px;border:2px solid #e2e8f0;background:#fff;color:#64748b;font-family:Prompt,sans-serif;font-size:13px;font-weight:600;cursor:pointer;">ทัวร์</button>
+              </div>
+              <input type="hidden" id="f-target-type" value="ROOM">
+            </div>
+            <div>
+              <label style="font-size:13px;font-weight:600;color:#374151;display:block;margin-bottom:6px;">เลือกรายการ <span style="color:#dc2626;">*</span></label>
+              <select id="f-target-id" required style="width:100%;padding:10px 14px;border:1px solid #d1d5db;border-radius:9px;font-family:Prompt,sans-serif;font-size:14px;outline:none;background:#fff;">
+                <option value="">— เลือก —</option>
+              </select>
+            </div>
+            <div>
+              <label style="font-size:13px;font-weight:600;color:#374151;display:block;margin-bottom:6px;">วันเริ่มต้น <span style="color:#dc2626;">*</span></label>
+              <input id="f-start-date" type="date" required
+                style="width:100%;padding:10px 14px;border:1px solid #d1d5db;border-radius:9px;font-family:Prompt,sans-serif;font-size:14px;outline:none;">
+            </div>
+            <div>
+              <label style="font-size:13px;font-weight:600;color:#374151;display:block;margin-bottom:6px;">วันสิ้นสุด <span style="color:#dc2626;">*</span></label>
+              <input id="f-end-date" type="date" required
+                style="width:100%;padding:10px 14px;border:1px solid #d1d5db;border-radius:9px;font-family:Prompt,sans-serif;font-size:14px;outline:none;">
+            </div>
+            <div>
+              <label style="font-size:13px;font-weight:600;color:#374151;display:block;margin-bottom:6px;">เหตุผล</label>
+              <input id="f-reason" type="text" placeholder="เช่น ซ่อมบำรุง, งานส่วนตัว"
+                style="width:100%;padding:10px 14px;border:1px solid #d1d5db;border-radius:9px;font-family:Prompt,sans-serif;font-size:14px;outline:none;">
+            </div>
+            <button type="submit" style="width:100%;padding:12px;border-radius:10px;border:none;background:#dc2626;color:#fff;font-family:Prompt,sans-serif;font-size:14px;font-weight:600;cursor:pointer;margin-top:4px;">
+              <i class="fa-solid fa-ban"></i> บันทึก Block
+            </button>
+          </form>
+        </div>
+
+        <!-- RIGHT: List -->
+        <div style="background:#fff;border:1px solid #e2e8f0;border-radius:16px;overflow:hidden;">
+          <div style="padding:16px 20px;border-bottom:1px solid #e2e8f0;">
+            <h3 style="font-size:15px;font-weight:600;color:#1e293b;">รายการ Block</h3>
+          </div>
+          <div id="blocks-list">
+            <div style="text-align:center;padding:60px;color:#94a3b8;">
+              <i class="fa-solid fa-circle-notch fa-spin" style="font-size:24px;color:#2563eb;"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+
+    // Responsive layout
+    function applyLayout() {
+      const grid = content.querySelector('[style*="grid-template-columns:1fr 2fr"]');
+      if (!grid) return;
+      grid.style.gridTemplateColumns = window.innerWidth < 900 ? '1fr' : '1fr 2fr';
+    }
+    applyLayout();
+    window.addEventListener('resize', applyLayout);
+  }
+
+  window.submitBlock = async function (e) {
+    e.preventDefault();
+    const btn = e.target.querySelector('[type=submit]');
+    btn.disabled = true;
+    const targetType = document.getElementById('f-target-type').value;
+    const targetId = parseInt(document.getElementById('f-target-id').value);
+    const startDate = document.getElementById('f-start-date').value;
+    const endDate = document.getElementById('f-end-date').value;
+    const reason = document.getElementById('f-reason').value.trim() || undefined;
+
+    const body = { targetType, startDate, endDate };
+    if (targetType === 'ROOM') body.roomId = targetId;
+    else body.tourId = targetId;
+    if (reason) body.reason = reason;
+
+    try {
+      await adminPost('/api/availability/blocks', body);
+      showToast('บันทึก Block สำเร็จ');
+      document.getElementById('avail-form').reset();
+      setTargetType('ROOM');
+      await loadBlocks();
+    } catch (err) {
+      showToast(err.message || 'เกิดข้อผิดพลาด', 'error');
+    } finally {
+      btn.disabled = false;
+    }
+  };
+
+  window.deleteBlock = async function (id) {
+    const b = blocks.find(x => x.id === id);
+    const name = getTargetName(b);
+    if (!confirm(`ลบ Block "${name}" (${fmtDateShort(b?.startDate)} – ${fmtDateShort(b?.endDate)}) ใช่หรือไม่?`)) return;
+    try {
+      await adminDelete('/api/availability/blocks/' + id);
+      showToast('ลบ Block สำเร็จ');
+      await loadBlocks();
+    } catch (err) {
+      showToast(err.message || 'เกิดข้อผิดพลาด', 'error');
+    }
+  };
+
+  function fmtDateShort(d) {
+    if (!d) return '—';
+    return new Date(d).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: '2-digit' });
+  }
+
+  async function loadBlocks() {
+    try {
+      blocks = await adminGet('/api/availability/blocks');
+    } catch (e) {
+      blocks = [];
+    }
+    const cnt = document.getElementById('block-count');
+    if (cnt) cnt.textContent = blocks.length + ' Block';
+    renderBlocks();
+  }
+
+  buildPage();
+  const [r, t] = await Promise.all([
+    adminGet('/api/rooms/admin/list').catch(() => []),
+    adminGet('/api/tours/admin/list').catch(() => []),
+  ]);
+  rooms = r; tours = t;
+  setTargetType('ROOM');
+  await loadBlocks();
+})();
+</script>
+</body>
+</html>

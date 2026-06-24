@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>รายละเอียดที่พัก | JongJongDi</title>
+  <meta name="description" content="ดูรายละเอียดและจองที่พัก — ราคาดี จองง่าย ผ่าน JongJongDi">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script src="_lib.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Prompt', sans-serif; color: #334155; background: #f8fafc; -webkit-font-smoothing: antialiased; }
+    a { text-decoration: none; }
+
+    .two-col {
+      display: grid;
+      grid-template-columns: 2fr 1fr;
+      gap: 24px;
+      align-items: start;
+    }
+    @media (max-width: 860px) {
+      .two-col { grid-template-columns: 1fr; }
+      .booking-card { position: static !important; }
+    }
+
+    .section-card {
+      background: #fff;
+      border-radius: 16px;
+      border: 1px solid #f1f5f9;
+      box-shadow: 0 1px 4px rgba(0,0,0,.06);
+      padding: 24px;
+      margin-bottom: 20px;
+    }
+    .section-title {
+      font-size: 16px;
+      font-weight: 700;
+      color: #1e293b;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .type-btn {
+      width: 100%;
+      text-align: left;
+      padding: 14px 16px;
+      border-radius: 12px;
+      border: 2px solid #e2e8f0;
+      background: #fff;
+      cursor: pointer;
+      font-family: 'Prompt', sans-serif;
+      transition: border-color .15s, background .15s;
+      margin-bottom: 10px;
+    }
+    .type-btn:hover { border-color: #93c5fd; background: #eff6ff; }
+    .type-btn.selected { border-color: #2563eb; background: #eff6ff; }
+
+    .guests-btn {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      border: 1.5px solid #e2e8f0;
+      background: #fff;
+      cursor: pointer;
+      font-size: 16px;
+      font-weight: 700;
+      color: #334155;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: border-color .15s, background .15s;
+    }
+    .guests-btn:hover:not(:disabled) { border-color: #2563eb; background: #eff6ff; color: #2563eb; }
+    .guests-btn:disabled { opacity: .4; cursor: not-allowed; }
+  </style>
+</head>
+<body>
+
+<div style="padding-top: 80px; min-height: 100vh;">
+
+  <!-- Loading state -->
+  <div id="loading-state" style="text-align: center; padding: 100px 16px; color: #94a3b8;">
+    <i class="fa-solid fa-circle-notch fa-spin" style="font-size: 32px;"></i>
+    <p style="margin-top: 16px; font-size: 14px;">กำลังโหลดข้อมูลที่พัก...</p>
+  </div>
+
+  <!-- 404 state -->
+  <div id="not-found-state" style="display: none; text-align: center; padding: 100px 16px; color: #94a3b8;">
+    <i class="fa-solid fa-door-closed" style="font-size: 56px; margin-bottom: 16px; display: block; opacity: .3;"></i>
+    <h2 style="font-size: 20px; font-weight: 700; color: #64748b; margin-bottom: 8px;">ไม่พบที่พักนี้</h2>
+    <p style="font-size: 14px; margin-bottom: 24px;">ที่พักที่คุณต้องการอาจถูกลบหรือ URL ไม่ถูกต้อง</p>
+    <a href="rooms.html" style="display: inline-flex; align-items: center; gap: 8px; padding: 10px 24px; background: #2563eb; color: #fff; border-radius: 10px; font-weight: 600; font-size: 14px;">
+      <i class="fa-solid fa-arrow-left"></i> กลับไปดูที่พักทั้งหมด
+    </a>
+  </div>
+
+  <!-- Room content -->
+  <div id="room-content" style="display: none;">
+
+    <!-- ─── Hero Image ─────────────────────────────────────────────────── -->
+    <div id="room-hero" style="height: 220px; position: relative; overflow: hidden; background: linear-gradient(135deg, #1e3a8a, #2563eb);">
+      <img id="hero-img" src="" alt="" style="width: 100%; height: 100%; object-fit: cover; display: none;" onerror="this.style.display='none'">
+      <!-- Back button -->
+      <a id="back-btn" href="rooms.html" style="position: absolute; top: 16px; left: 16px; display: inline-flex; align-items: center; gap: 8px; background: rgba(0,0,0,.45); backdrop-filter: blur(6px); color: #fff; padding: 8px 14px; border-radius: 9999px; font-size: 13px; font-weight: 500; z-index: 2; transition: background .15s;" onmouseover="this.style.background='rgba(0,0,0,.65)'" onmouseout="this.style.background='rgba(0,0,0,.45)'">
+        <i class="fa-solid fa-arrow-left"></i> <span id="back-label">ที่พักทั้งหมด</span>
+      </a>
+      <!-- Gradient overlay -->
+      <div style="position: absolute; inset: 0; background: linear-gradient(to top, rgba(0,0,0,.65) 0%, rgba(0,0,0,.1) 60%, transparent 100%);"></div>
+      <!-- Room name overlay -->
+      <div style="position: absolute; bottom: 0; left: 0; right: 0; padding: 16px 20px;">
+        <div style="max-width: 1200px; margin: 0 auto;">
+          <h1 id="room-name-hero" style="font-size: clamp(18px, 3vw, 28px); font-weight: 700; color: #fff; text-shadow: 0 2px 8px rgba(0,0,0,.4);"></h1>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─── Main Content ───────────────────────────────────────────────── -->
+    <div style="max-width: 1200px; margin: 0 auto; padding: 24px 16px 60px;">
+      <div class="two-col">
+
+        <!-- LEFT COLUMN -->
+        <div>
+
+          <!-- Description -->
+          <div class="section-card">
+            <h2 class="section-title">
+              <i class="fa-solid fa-circle-info" style="color: #2563eb;"></i>
+              <span id="desc-title">รายละเอียด</span>
+            </h2>
+            <p id="room-description" style="font-size: 14px; color: #475569; line-height: 1.7;"></p>
+          </div>
+
+          <!-- Room Types -->
+          <div class="section-card">
+            <h2 class="section-title">
+              <i class="fa-solid fa-layer-group" style="color: #2563eb;"></i>
+              <span id="types-title">ประเภทห้อง</span>
+            </h2>
+            <div id="room-types-list"></div>
+          </div>
+
+          <!-- Gallery -->
+          <div id="gallery-section" class="section-card" style="display: none;">
+            <h2 class="section-title">
+              <i class="fa-solid fa-images" style="color: #2563eb;"></i>
+              <span id="gallery-title">รูปภาพ</span>
+            </h2>
+            <div id="gallery-container"></div>
+          </div>
+
+          <!-- Availability Calendar -->
+          <div class="section-card">
+            <h2 class="section-title">
+              <i class="fa-solid fa-calendar-days" style="color: #2563eb;"></i>
+              <span id="calendar-title">ตรวจสอบวันว่าง</span>
+            </h2>
+            <div id="calendar-container"></div>
+          </div>
+
+          <!-- Reviews -->
+          <div id="reviews-container"></div>
+
+        </div>
+
+        <!-- RIGHT COLUMN: Booking Card -->
+        <div>
+          <div class="booking-card section-card" style="position: sticky; top: 96px;">
+
+            <!-- Price display -->
+            <div id="price-display" style="margin-bottom: 16px;">
+              <div style="font-size: 12px; color: #94a3b8; margin-bottom: 4px;" id="price-label">ราคาต่อคืน</div>
+              <div id="price-value" style="font-size: 24px; font-weight: 700; color: #f59e0b;">
+                <span style="font-size: 14px; color: #94a3b8;">เลือกประเภทห้องด้านซ้าย</span>
+              </div>
+            </div>
+
+            <hr style="border: none; border-top: 1px solid #f1f5f9; margin-bottom: 16px;">
+
+            <!-- Date display -->
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px;">
+              <div>
+                <div style="font-size: 11px; color: #94a3b8; margin-bottom: 4px;" id="ci-label">เช็คอิน</div>
+                <div id="ci-display" style="font-size: 14px; font-weight: 600; color: #334155; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 8px 10px; min-height: 38px; display: flex; align-items: center;">
+                  <span style="color: #cbd5e1; font-size: 13px;" id="ci-placeholder">เลือกวันที่</span>
+                </div>
+              </div>
+              <div>
+                <div style="font-size: 11px; color: #94a3b8; margin-bottom: 4px;" id="co-label">เช็คเอาท์</div>
+                <div id="co-display" style="font-size: 14px; font-weight: 600; color: #334155; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 8px 10px; min-height: 38px; display: flex; align-items: center;">
+                  <span style="color: #cbd5e1; font-size: 13px;" id="co-placeholder">เลือกวันที่</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Guests -->
+            <div style="margin-bottom: 16px;">
+              <div style="font-size: 11px; color: #94a3b8; margin-bottom: 8px;" id="guests-label">จำนวนผู้เข้าพัก</div>
+              <div style="display: flex; align-items: center; gap: 12px;">
+                <button class="guests-btn" id="guests-minus" onclick="changeGuests(-1)">−</button>
+                <span id="guests-count" style="font-size: 16px; font-weight: 700; color: #1e293b; min-width: 28px; text-align: center;">1</span>
+                <button class="guests-btn" id="guests-plus" onclick="changeGuests(1)">+</button>
+                <span id="guests-max-label" style="font-size: 12px; color: #94a3b8;"></span>
+              </div>
+            </div>
+
+            <!-- Price breakdown -->
+            <div id="price-breakdown" style="display: none; background: #f8fafc; border-radius: 10px; padding: 14px; margin-bottom: 16px; font-size: 13px;">
+              <div style="display: flex; justify-content: space-between; margin-bottom: 6px; color: #475569;">
+                <span id="breakdown-label"></span>
+                <span id="breakdown-calc" style="font-weight: 600;"></span>
+              </div>
+              <div style="border-top: 1px solid #e2e8f0; padding-top: 8px; display: flex; justify-content: space-between; font-weight: 700; color: #1e293b; font-size: 15px;">
+                <span id="total-label">ยอดรวม (ประมาณ)</span>
+                <span id="total-value" style="color: #f59e0b;"></span>
+              </div>
+              <p id="season-note" style="font-size: 11px; color: #94a3b8; margin-top: 8px; line-height: 1.4;"></p>
+            </div>
+
+            <!-- Book button -->
+            <button id="book-btn" onclick="doBook()" style="width: 100%; padding: 14px; background: #2563eb; color: #fff; border: none; border-radius: 12px; font-family: 'Prompt', sans-serif; font-size: 15px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: background .15s;" onmouseover="this.style.background='#1d4ed8'" onmouseout="this.style.background='#2563eb'">
+              <i class="fa-solid fa-calendar-check"></i>
+              <span id="book-btn-text">จองที่พัก</span>
+            </button>
+            <p id="book-hint" style="font-size: 12px; color: #94a3b8; text-align: center; margin-top: 10px;"></p>
+
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ─── State ───────────────────────────────────────────────────────────────────
+const slug = getQP('slug');
+let checkIn = getQP('checkIn') || '';
+let checkOut = getQP('checkOut') || '';
+let guests = 1;
+let selectedType = null;
+let room = null;
+
+// ─── Init ─────────────────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', async () => {
+  initPage({ base: '' });
+
+  if (!slug) {
+    showNotFound();
+    return;
+  }
+
+  room = await getRoom(slug);
+
+  if (!room) {
+    showNotFound();
+    return;
+  }
+
+  showRoom();
+});
+
+function showNotFound() {
+  document.getElementById('loading-state').style.display = 'none';
+  document.getElementById('not-found-state').style.display = 'block';
+}
+
+function showRoom() {
+  const lang = getLang();
+
+  document.getElementById('loading-state').style.display = 'none';
+  document.getElementById('room-content').style.display = 'block';
+
+  // Update page title
+  const name = pick(room.nameTh, room.nameEn, lang);
+  document.title = `${name} | JongJongDi`;
+
+  // Hero image
+  const heroImg = document.getElementById('hero-img');
+  const imgUrl = mainImageUrl(room.images);
+  if (imgUrl) {
+    heroImg.src = imgUrl;
+    heroImg.alt = name;
+    heroImg.style.display = 'block';
+  }
+
+  // Back button
+  const backParams = new URLSearchParams();
+  if (getQP('q')) backParams.set('q', getQP('q'));
+  if (checkIn) backParams.set('checkIn', checkIn);
+  if (checkOut) backParams.set('checkOut', checkOut);
+  const backHref = backParams.toString() ? `rooms.html?${backParams}` : 'rooms.html';
+  document.getElementById('back-btn').href = backHref;
+  document.getElementById('back-label').textContent = pick('ที่พักทั้งหมด', 'All Rooms', lang);
+
+  // Hero name
+  document.getElementById('room-name-hero').textContent = name;
+
+  // Description
+  document.getElementById('desc-title').textContent = pick('รายละเอียด', 'Description', lang);
+  document.getElementById('room-description').textContent = pick(room.descriptionTh, room.descriptionEn, lang) || pick('ไม่มีรายละเอียด', 'No description available.', lang);
+
+  // Room types
+  renderTypes(lang);
+
+  // Gallery
+  if (room.images && room.images.length > 1) {
+    const gallerySection = document.getElementById('gallery-section');
+    gallerySection.style.display = 'block';
+    document.getElementById('gallery-title').textContent = pick('รูปภาพ', 'Gallery', lang);
+    document.getElementById('gallery-container').innerHTML = renderGallery(room.images, name);
+  }
+
+  // Calendar
+  document.getElementById('calendar-title').textContent = pick('ตรวจสอบวันว่าง', 'Check Availability', lang);
+  renderCalendar(slug, document.getElementById('calendar-container'), lang, checkIn, checkOut, onDatesSelected);
+
+  // Reviews
+  renderReviews('room', slug, document.getElementById('reviews-container'), lang);
+
+  // Booking card labels
+  updateBookingCard(lang);
+}
+
+function renderTypes(lang) {
+  const types = room.types || [];
+  document.getElementById('types-title').textContent = pick('ประเภทห้อง', 'Room Types', lang);
+
+  if (!types.length) {
+    document.getElementById('room-types-list').innerHTML = `<p style="font-size:13px;color:#94a3b8;">${pick('ไม่มีข้อมูลประเภทห้อง', 'No room types available', lang)}</p>`;
+    return;
+  }
+
+  document.getElementById('room-types-list').innerHTML = types.map((type, i) => {
+    const typeName = pick(type.nameTh, type.nameEn, lang);
+    return `<button class="type-btn ${selectedType && selectedType.id === type.id ? 'selected' : ''}" onclick="selectType(${i})" id="type-btn-${i}">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;">
+        <div style="flex:1;">
+          <div style="font-weight:700;font-size:14px;color:#1e293b;margin-bottom:4px;">${typeName}</div>
+          <div style="display:flex;flex-wrap:wrap;gap:12px;font-size:12px;color:#64748b;">
+            <span><i class="fa-solid fa-user" style="color:#94a3b8;margin-right:4px;"></i>${pick('สูงสุด', 'Up to', lang)} ${type.maxGuests} ${pick('คน', 'guests', lang)}</span>
+            <span><i class="fa-solid fa-bed" style="color:#94a3b8;margin-right:4px;"></i>${type.quantity} ${pick('ห้อง', 'rooms', lang)}</span>
+          </div>
+        </div>
+        <div style="text-align:right;flex-shrink:0;">
+          <div style="font-size:18px;font-weight:700;color:#f59e0b;">${fmt(type.pricePerNight)}</div>
+          <div style="font-size:11px;color:#94a3b8;">${pick('.-/คืน', 'THB/night', lang)}</div>
+        </div>
+      </div>
+    </button>`;
+  }).join('');
+}
+
+function selectType(index) {
+  const lang = getLang();
+  const types = room.types || [];
+  selectedType = types[index];
+
+  // Deselect all, select this one
+  types.forEach((_, i) => {
+    const btn = document.getElementById(`type-btn-${i}`);
+    if (btn) btn.classList.toggle('selected', i === index);
+  });
+
+  // Clamp guests to new max
+  if (guests > selectedType.maxGuests) guests = selectedType.maxGuests;
+  if (guests < 1) guests = 1;
+
+  updateBookingCard(lang);
+}
+
+function onDatesSelected(ci, co) {
+  checkIn = ci;
+  checkOut = co;
+  const lang = getLang();
+  updateBookingCard(lang);
+}
+
+function changeGuests(delta) {
+  const max = selectedType ? selectedType.maxGuests : 1;
+  guests = Math.min(max, Math.max(1, guests + delta));
+  const lang = getLang();
+  updateBookingCard(lang);
+}
+
+function nightsBetween(ci, co) {
+  if (!ci || !co) return 0;
+  const ms = new Date(co).getTime() - new Date(ci).getTime();
+  return Math.max(0, Math.ceil(ms / 86400000));
+}
+
+function updateBookingCard(lang) {
+  // Price display
+  const priceVal = document.getElementById('price-value');
+  if (selectedType) {
+    priceVal.innerHTML = `<span style="font-size:26px;font-weight:700;color:#f59e0b;">${fmt(selectedType.pricePerNight)}</span><span style="font-size:13px;color:#94a3b8;font-weight:400;"> ${pick('.-/คืน', 'THB/night', lang)}</span>`;
+    document.getElementById('price-label').textContent = pick(selectedType.nameTh, selectedType.nameEn, lang);
+  } else {
+    priceVal.innerHTML = `<span style="font-size:14px;color:#94a3b8;">${pick('เลือกประเภทห้องด้านซ้าย', 'Select a room type on the left', lang)}</span>`;
+    document.getElementById('price-label').textContent = pick('ราคาต่อคืน', 'Price per night', lang);
+  }
+
+  // Date display
+  document.getElementById('ci-label').textContent = pick('เช็คอิน', 'Check-in', lang);
+  document.getElementById('co-label').textContent = pick('เช็คเอาท์', 'Check-out', lang);
+
+  const ciDisplay = document.getElementById('ci-display');
+  const coDisplay = document.getElementById('co-display');
+
+  if (checkIn) {
+    ciDisplay.innerHTML = `<span style="font-size:13px;font-weight:600;color:#1e293b;">${fmtDate(checkIn)}</span>`;
+  } else {
+    ciDisplay.innerHTML = `<span style="color:#cbd5e1;font-size:13px;">${pick('เลือกวันที่', 'Select date', lang)}</span>`;
+  }
+  if (checkOut) {
+    coDisplay.innerHTML = `<span style="font-size:13px;font-weight:600;color:#1e293b;">${fmtDate(checkOut)}</span>`;
+  } else {
+    coDisplay.innerHTML = `<span style="color:#cbd5e1;font-size:13px;">${pick('เลือกวันที่', 'Select date', lang)}</span>`;
+  }
+
+  // Guests
+  document.getElementById('guests-label').textContent = pick('จำนวนผู้เข้าพัก', 'Guests', lang);
+  document.getElementById('guests-count').textContent = guests;
+  const maxGuests = selectedType ? selectedType.maxGuests : 1;
+  document.getElementById('guests-max-label').textContent = pick(`(สูงสุด ${maxGuests} คน)`, `(max ${maxGuests})`, lang);
+  document.getElementById('guests-minus').disabled = guests <= 1;
+  document.getElementById('guests-plus').disabled = !selectedType || guests >= maxGuests;
+
+  // Price breakdown
+  const nights = nightsBetween(checkIn, checkOut);
+  const breakdownEl = document.getElementById('price-breakdown');
+  if (selectedType && nights > 0) {
+    breakdownEl.style.display = 'block';
+    const total = selectedType.pricePerNight * nights;
+    document.getElementById('breakdown-label').textContent = `${fmt(selectedType.pricePerNight)} × ${nights} ${pick('คืน', 'nights', lang)}`;
+    document.getElementById('breakdown-calc').textContent = `${fmt(total)} ${pick('.-', 'THB', lang)}`;
+    document.getElementById('total-label').textContent = pick('ยอดรวม (ประมาณ)', 'Est. Total', lang);
+    document.getElementById('total-value').textContent = `${fmt(total)} ${pick('.-', 'THB', lang)}`;
+    document.getElementById('season-note').textContent = pick('ยอดสุดท้ายอาจเปลี่ยนถ้าอยู่ใน high season', 'Final price may vary during high season.', lang);
+  } else {
+    breakdownEl.style.display = 'none';
+  }
+
+  // Book button state
+  const bookBtn = document.getElementById('book-btn');
+  const bookHint = document.getElementById('book-hint');
+  const bookText = document.getElementById('book-btn-text');
+
+  const missingType = !selectedType;
+  const missingDates = !checkIn || !checkOut;
+
+  if (missingType && missingDates) {
+    bookBtn.disabled = true;
+    bookBtn.style.background = '#94a3b8';
+    bookBtn.style.cursor = 'not-allowed';
+    bookText.textContent = pick('จองที่พัก', 'Book Now', lang);
+    bookHint.textContent = pick('กรุณาเลือกประเภทห้องและวันที่', 'Please select room type and dates', lang);
+  } else if (missingType) {
+    bookBtn.disabled = true;
+    bookBtn.style.background = '#94a3b8';
+    bookBtn.style.cursor = 'not-allowed';
+    bookText.textContent = pick('จองที่พัก', 'Book Now', lang);
+    bookHint.textContent = pick('กรุณาเลือกประเภทห้อง', 'Please select a room type', lang);
+  } else if (missingDates) {
+    bookBtn.disabled = true;
+    bookBtn.style.background = '#94a3b8';
+    bookBtn.style.cursor = 'not-allowed';
+    bookText.textContent = pick('จองที่พัก', 'Book Now', lang);
+    bookHint.textContent = pick('กรุณาเลือกวันเช็คอิน-เช็คเอาท์', 'Please select check-in and check-out dates', lang);
+  } else {
+    bookBtn.disabled = false;
+    bookBtn.style.background = '#2563eb';
+    bookBtn.style.cursor = 'pointer';
+    bookText.textContent = pick('จองที่พัก', 'Book Now', lang);
+    bookHint.textContent = '';
+  }
+
+  // Re-attach hover events if re-enabled
+  if (!bookBtn.disabled) {
+    bookBtn.onmouseover = () => { bookBtn.style.background = '#1d4ed8'; };
+    bookBtn.onmouseout = () => { bookBtn.style.background = '#2563eb'; };
+  } else {
+    bookBtn.onmouseover = null;
+    bookBtn.onmouseout = null;
+  }
+}
+
+function doBook() {
+  if (!selectedType || !checkIn || !checkOut) return;
+  const p = new URLSearchParams({
+    type: 'ACCOMMODATION',
+    roomTypeId: selectedType.id,
+    roomSlug: slug,
+    checkIn,
+    checkOut,
+    guests: guests.toString(),
+  });
+  window.location.href = `booking.html?${p}`;
+}
+</script>
+
+</body>
+</html>

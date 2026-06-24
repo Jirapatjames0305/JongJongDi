@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>สินค้า – JongJongDi Admin</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script src="_lib.js"></script>
+  <style>
+    * { box-sizing: border-box; }
+    body { font-family: Prompt, sans-serif; }
+    input, textarea, select, button { font-family: Prompt, sans-serif; }
+    .btn { cursor: pointer; border: none; border-radius: 8px; font-size: 13px; font-weight: 600; padding: 7px 14px; transition: opacity .15s; }
+    .btn:hover { opacity: .85; }
+    .btn-blue { background: #2563eb; color: #fff; }
+    .btn-blue-outline { background: #fff; color: #2563eb; border: 1px solid #2563eb; }
+    .btn-gray { background: #f1f5f9; color: #475569; border: 1px solid #e2e8f0; }
+    .btn-red { background: #fee2e2; color: #dc2626; border: 1px solid #fca5a5; }
+    .form-label { display: block; font-size: 13px; font-weight: 600; color: #374151; margin-bottom: 4px; }
+    .form-input { width: 100%; border: 1px solid #d1d5db; border-radius: 8px; padding: 8px 12px; font-size: 14px; color: #1e293b; outline: none; transition: border-color .15s; font-family: Prompt, sans-serif; }
+    .form-input:focus { border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37,99,235,.1); }
+    .modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,.5); z-index: 50; display: flex; align-items: center; justify-content: center; padding: 16px; }
+    .modal-box { background: #fff; border-radius: 16px; box-shadow: 0 20px 60px rgba(0,0,0,.25); width: 100%; max-width: 640px; max-height: 90vh; overflow-y: auto; }
+    .modal-header { display: flex; align-items: center; justify-content: space-between; padding: 20px 24px 16px; border-bottom: 1px solid #f1f5f9; position: sticky; top: 0; background: #fff; z-index: 1; border-radius: 16px 16px 0 0; }
+    .modal-body { padding: 24px; }
+    .modal-footer { padding: 16px 24px; border-top: 1px solid #f1f5f9; display: flex; justify-content: flex-end; gap: 10px; }
+  </style>
+</head>
+<body>
+<script>
+// ──────────────────────────────────────────────────────────────
+// State
+// ──────────────────────────────────────────────────────────────
+var _products = [];
+var _editingProduct = null;
+var _imgProduct = null;
+var _imgImages = [];
+
+// ──────────────────────────────────────────────────────────────
+// Boot
+// ──────────────────────────────────────────────────────────────
+(function () {
+  var shell = renderAdminShell({ activePage: 'products.html' });
+  if (!shell) return;
+  loadProducts();
+})();
+
+// ──────────────────────────────────────────────────────────────
+// Data
+// ──────────────────────────────────────────────────────────────
+async function loadProducts() {
+  var pc = document.getElementById('page-content');
+  pc.insertAdjacentHTML('beforeend', '<div id="products-loading" style="text-align:center;padding:40px;color:#94a3b8"><i class="fa-solid fa-circle-notch fa-spin" style="font-size:24px"></i></div>');
+  try {
+    _products = await adminGet('/api/products/admin/list');
+  } catch (e) {
+    _products = [];
+    showToast('โหลดข้อมูลไม่ได้: ' + e.message, 'error');
+  }
+  document.getElementById('products-loading')?.remove();
+  renderPage();
+}
+
+// ──────────────────────────────────────────────────────────────
+// Render
+// ──────────────────────────────────────────────────────────────
+function renderPage() {
+  var pc = document.getElementById('page-content');
+  var existing = document.getElementById('products-root');
+  if (existing) existing.remove();
+
+  var total = _products.length;
+  var activeCount = _products.filter(function (p) { return p.isActive; }).length;
+
+  var html = '<div id="products-root">';
+
+  // Header
+  html += '<div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:24px">' +
+    '<div>' +
+      '<h1 style="margin:0 0 4px;font-size:22px;font-weight:700;color:#0f172a">สินค้า</h1>' +
+      '<p style="margin:0;font-size:13px;color:#64748b">' + total + ' สินค้า · ขายอยู่ ' + activeCount + '</p>' +
+    '</div>' +
+    '<button class="btn btn-blue" onclick="openProductForm(null)">' +
+      '<i class="fa-solid fa-plus" style="margin-right:6px"></i>เพิ่มสินค้า' +
+    '</button>' +
+  '</div>';
+
+  if (_products.length === 0) {
+    html += '<div style="text-align:center;padding:60px 20px;background:#fff;border-radius:16px;border:1px solid #f1f5f9">' +
+      '<i class="fa-solid fa-bag-shopping" style="font-size:48px;color:#fde68a;margin-bottom:16px;display:block"></i>' +
+      '<p style="color:#94a3b8;font-size:15px;margin:0 0 16px">ยังไม่มีสินค้า</p>' +
+      '<button class="btn btn-blue" onclick="openProductForm(null)">เพิ่มสินค้าแรก</button>' +
+    '</div>';
+  } else {
+    html += '<div style="background:#fff;border-radius:16px;border:1px solid #f1f5f9;overflow:hidden">';
+    _products.forEach(function (product, idx) {
+      var imgCount = (product.images || []).length;
+      var mainImg = (product.images || []).find(function (i) { return i.isMain; }) || (product.images || [])[0];
+      var imgUrl = mainImg ? mainImg.url : '';
+      var borderTop = idx > 0 ? 'border-top:1px solid #f1f5f9;' : '';
+
+      html += '<div style="' + borderTop + 'padding:16px 20px;display:flex;align-items:flex-start;gap:16px;flex-wrap:wrap">' +
+
+        // Thumbnail
+        '<div style="width:96px;height:96px;border-radius:10px;overflow:hidden;flex-shrink:0;background:linear-gradient(135deg,#fef3c7,#fde68a);display:flex;align-items:center;justify-content:center">' +
+          (imgUrl ? '<img src="' + imgUrl + '" alt="" style="width:100%;height:100%;object-fit:cover">' :
+            '<i class="fa-solid fa-bag-shopping" style="font-size:28px;color:#f59e0b"></i>') +
+        '</div>' +
+
+        // Info
+        '<div style="flex:1;min-width:0">' +
+          '<div style="font-size:15px;font-weight:700;color:#0f172a;margin-bottom:2px">' + escH(product.nameTh) + '</div>' +
+          '<div style="font-size:12px;color:#94a3b8;margin-bottom:8px">' + escH(product.nameEn || '') + ' · /' + escH(product.slug) + '</div>' +
+          '<div style="font-size:12px;color:#64748b;display:flex;flex-wrap:wrap;gap:12px;align-items:center">' +
+            (product.oldPrice ? '<span style="text-decoration:line-through;color:#cbd5e1">฿' + fmt(product.oldPrice) + '</span>' : '') +
+            '<span style="font-size:14px;font-weight:700;color:#f59e0b">฿' + fmt(product.price) + (product.unitLabel ? '<span style="font-size:12px;font-weight:400;color:#94a3b8">/' + escH(product.unitLabel) + '</span>' : '') + '</span>' +
+            (product.location ? '<span><i class="fa-solid fa-location-dot" style="color:#ef4444;margin-right:3px"></i>' + escH(product.location) + '</span>' : '') +
+            (product.badge ? '<span style="background:#fee2e2;color:#dc2626;border-radius:999px;font-size:11px;font-weight:600;padding:2px 8px">' + escH(product.badge) + '</span>' : '') +
+            '<span>' + imgCount + ' รูป</span>' +
+          '</div>' +
+        '</div>' +
+
+        // Actions
+        '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:8px;flex-shrink:0">' +
+          '<span style="' + (product.isActive ? 'background:#dcfce7;color:#15803d' : 'background:#f1f5f9;color:#64748b') + ';border-radius:999px;font-size:12px;font-weight:600;padding:3px 12px;margin-bottom:4px">' +
+            (product.isActive ? 'ขายอยู่' : 'ปิด') +
+          '</span>' +
+          '<div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end">' +
+            '<button class="btn btn-blue" onclick="openProductForm(\'' + product.id + '\')"><i class="fa-solid fa-pen" style="margin-right:4px"></i>แก้ไข</button>' +
+            '<button class="btn btn-blue-outline" onclick="openImageManager(\'' + product.id + '\',\'products\')"><i class="fa-solid fa-image" style="margin-right:4px"></i>รูปภาพ</button>' +
+            '<button class="btn btn-gray" onclick="toggleProductActive(\'' + product.id + '\',' + product.isActive + ')">' +
+              (product.isActive ? '<i class="fa-solid fa-eye-slash" style="margin-right:4px"></i>ปิดขาย' : '<i class="fa-solid fa-eye" style="margin-right:4px"></i>เปิดขาย') +
+            '</button>' +
+            '<button class="btn btn-red" onclick="deleteProduct(\'' + product.id + '\',\'' + escH(product.nameTh) + '\')"><i class="fa-solid fa-trash" style="margin-right:4px"></i>ลบ</button>' +
+          '</div>' +
+        '</div>' +
+      '</div>';
+    });
+    html += '</div>';
+  }
+
+  html += '</div>'; // products-root
+  html += productFormModalHtml();
+  html += imageManagerHtml();
+
+  pc.insertAdjacentHTML('beforeend', html);
+}
+
+// ──────────────────────────────────────────────────────────────
+// Product Form Modal
+// ──────────────────────────────────────────────────────────────
+function productFormModalHtml() {
+  return '<div id="product-form-modal" style="display:none" class="modal-backdrop" onclick="if(event.target===this)closeProductForm()">' +
+    '<div class="modal-box">' +
+      '<div class="modal-header">' +
+        '<h2 id="product-form-title" style="margin:0;font-size:17px;font-weight:700;color:#0f172a">เพิ่มสินค้า</h2>' +
+        '<button class="btn btn-gray" onclick="closeProductForm()" style="padding:6px 10px"><i class="fa-solid fa-xmark"></i></button>' +
+      '</div>' +
+      '<div class="modal-body">' +
+        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">' +
+          '<div>' +
+            '<label class="form-label">Slug <span style="color:#dc2626">*</span></label>' +
+            '<input id="pf-slug" class="form-input" placeholder="เช่น durian-chips-premium">' +
+          '</div>' +
+          '<div></div>' +
+          '<div>' +
+            '<label class="form-label">ชื่อ (ไทย) <span style="color:#dc2626">*</span></label>' +
+            '<input id="pf-nameTh" class="form-input" placeholder="ชื่อสินค้าภาษาไทย">' +
+          '</div>' +
+          '<div>' +
+            '<label class="form-label">ชื่อ (อังกฤษ)</label>' +
+            '<input id="pf-nameEn" class="form-input" placeholder="Product name in English">' +
+          '</div>' +
+          '<div>' +
+            '<label class="form-label">คำอธิบาย (ไทย)</label>' +
+            '<textarea id="pf-descTh" class="form-input" rows="3" placeholder="รายละเอียดสินค้าภาษาไทย"></textarea>' +
+          '</div>' +
+          '<div>' +
+            '<label class="form-label">คำอธิบาย (อังกฤษ)</label>' +
+            '<textarea id="pf-descEn" class="form-input" rows="3" placeholder="Description in English"></textarea>' +
+          '</div>' +
+          '<div>' +
+            '<label class="form-label">ราคา (บาท) <span style="color:#dc2626">*</span></label>' +
+            '<input id="pf-price" type="number" min="0" step="0.01" class="form-input" placeholder="299">' +
+          '</div>' +
+          '<div>' +
+            '<label class="form-label">ราคาเดิม <span style="font-weight:400;color:#94a3b8">(ไม่บังคับ · แสดงขีดฆ่า)</span></label>' +
+            '<input id="pf-oldPrice" type="number" min="0" step="0.01" class="form-input" placeholder="399">' +
+          '</div>' +
+          '<div>' +
+            '<label class="form-label">ป้ายกำกับหน่วย <span style="font-weight:400;color:#94a3b8">(unitLabel)</span></label>' +
+            '<input id="pf-unit" class="form-input" placeholder="เช่น ถุง, กก., ชิ้น">' +
+          '</div>' +
+          '<div>' +
+            '<label class="form-label">Badge <span style="font-weight:400;color:#94a3b8">(ป้ายพิเศษ)</span></label>' +
+            '<input id="pf-badge" class="form-input" placeholder="เช่น ขายดี, ใหม่, HOT">' +
+          '</div>' +
+          '<div>' +
+            '<label class="form-label">สถานที่ / แหล่งที่มา</label>' +
+            '<input id="pf-location" class="form-input" placeholder="เช่น เชียงราย, จันทบุรี">' +
+          '</div>' +
+          '<div>' +
+            '<label class="form-label">หมายเหตุจัดส่ง</label>' +
+            '<input id="pf-delivery" class="form-input" placeholder="เช่น จัดส่งภายใน 3-5 วัน">' +
+          '</div>' +
+        '</div>' +
+      '</div>' +
+      '<div class="modal-footer">' +
+        '<button class="btn btn-gray" onclick="closeProductForm()">ยกเลิก</button>' +
+        '<button class="btn btn-blue" id="pf-save-btn" onclick="saveProduct()"><i class="fa-solid fa-floppy-disk" style="margin-right:6px"></i>บันทึก</button>' +
+      '</div>' +
+    '</div>' +
+  '</div>';
+}
+
+function openProductForm(productId) {
+  _editingProduct = null;
+  var titleEl = document.getElementById('product-form-title');
+  if (productId) {
+    _editingProduct = _products.find(function (p) { return p.id === productId; });
+    titleEl.textContent = 'แก้ไขสินค้า';
+  } else {
+    titleEl.textContent = 'เพิ่มสินค้า';
+  }
+
+  var p = _editingProduct;
+  document.getElementById('pf-slug').value = p ? p.slug : '';
+  document.getElementById('pf-nameTh').value = p ? p.nameTh : '';
+  document.getElementById('pf-nameEn').value = p ? p.nameEn || '' : '';
+  document.getElementById('pf-descTh').value = p ? p.descriptionTh || '' : '';
+  document.getElementById('pf-descEn').value = p ? p.descriptionEn || '' : '';
+  document.getElementById('pf-price').value = p ? p.price : '';
+  document.getElementById('pf-oldPrice').value = p ? (p.oldPrice || '') : '';
+  document.getElementById('pf-unit').value = p ? (p.unitLabel || '') : '';
+  document.getElementById('pf-badge').value = p ? (p.badge || '') : '';
+  document.getElementById('pf-location').value = p ? (p.location || '') : '';
+  document.getElementById('pf-delivery').value = p ? (p.deliveryNote || '') : '';
+
+  document.getElementById('product-form-modal').style.display = 'flex';
+  document.body.style.overflow = 'hidden';
+}
+
+function closeProductForm() {
+  document.getElementById('product-form-modal').style.display = 'none';
+  document.body.style.overflow = '';
+}
+
+async function saveProduct() {
+  var btn = document.getElementById('pf-save-btn');
+  var slug = document.getElementById('pf-slug').value.trim();
+  var nameTh = document.getElementById('pf-nameTh').value.trim();
+  var nameEn = document.getElementById('pf-nameEn').value.trim();
+  var descriptionTh = document.getElementById('pf-descTh').value.trim();
+  var descriptionEn = document.getElementById('pf-descEn').value.trim();
+  var price = parseFloat(document.getElementById('pf-price').value);
+  var oldPriceVal = document.getElementById('pf-oldPrice').value.trim();
+  var unitLabel = document.getElementById('pf-unit').value.trim();
+  var badge = document.getElementById('pf-badge').value.trim();
+  var location = document.getElementById('pf-location').value.trim();
+  var deliveryNote = document.getElementById('pf-delivery').value.trim();
+
+  if (!slug || !nameTh || isNaN(price)) { showToast('กรุณากรอก Slug, ชื่อสินค้า และราคา', 'error'); return; }
+
+  var body = { slug: slug, nameTh: nameTh, nameEn: nameEn, descriptionTh: descriptionTh, descriptionEn: descriptionEn, price: price };
+  if (oldPriceVal !== '') body.oldPrice = parseFloat(oldPriceVal);
+  if (unitLabel) body.unitLabel = unitLabel;
+  if (badge) body.badge = badge;
+  if (location) body.location = location;
+  if (deliveryNote) body.deliveryNote = deliveryNote;
+
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin" style="margin-right:6px"></i>กำลังบันทึก...';
+  try {
+    if (_editingProduct) {
+      await adminPatch('/api/products/' + _editingProduct.id, body);
+      showToast('อัปเดตสินค้าสำเร็จ');
+    } else {
+      await adminPost('/api/products', body);
+      showToast('เพิ่มสินค้าสำเร็จ');
+    }
+    closeProductForm();
+    _products = [];
+    document.getElementById('products-root')?.remove();
+    loadProducts();
+  } catch (e) {
+    showToast(e.message, 'error');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fa-solid fa-floppy-disk" style="margin-right:6px"></i>บันทึก';
+  }
+}
+
+async function toggleProductActive(productId, currentActive) {
+  try {
+    await adminPatch('/api/products/' + productId, { isActive: !currentActive });
+    showToast(currentActive ? 'ปิดขายแล้ว' : 'เปิดขายแล้ว');
+    var idx = _products.findIndex(function (p) { return p.id === productId; });
+    if (idx !== -1) _products[idx].isActive = !currentActive;
+    document.getElementById('products-root')?.remove();
+    renderPage();
+  } catch (e) {
+    showToast(e.message, 'error');
+  }
+}
+
+async function deleteProduct(productId, name) {
+  if (!confirm('ลบสินค้า "' + name + '"?\n\nการกระทำนี้ไม่สามารถย้อนกลับได้')) return;
+  try {
+    await adminDelete('/api/products/' + productId);
+    showToast('ลบสินค้าแล้ว');
+    _products = _products.filter(function (p) { return p.id !== productId; });
+    document.getElementById('products-root')?.remove();
+    renderPage();
+  } catch (e) {
+    showToast(e.message, 'error');
+  }
+}
+
+// ──────────────────────────────────────────────────────────────
+// Image Manager
+// ──────────────────────────────────────────────────────────────
+function imageManagerHtml() {
+  return '<div id="img-manager-modal" style="display:none" class="modal-backdrop" onclick="if(event.target===this)closeImageManager()">' +
+    '<div class="modal-box" style="max-width:600px">' +
+      '<div class="modal-header">' +
+        '<div>' +
+          '<h2 style="margin:0 0 2px;font-size:17px;font-weight:700;color:#0f172a">จัดการรูปภาพ</h2>' +
+          '<p id="img-count-label" style="margin:0;font-size:12px;color:#94a3b8">0/10</p>' +
+        '</div>' +
+        '<button class="btn btn-gray" onclick="closeImageManager()" style="padding:6px 10px"><i class="fa-solid fa-xmark"></i></button>' +
+      '</div>' +
+      '<div class="modal-body">' +
+        '<div id="img-grid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px"></div>' +
+        '<div id="img-upload-area">' +
+          '<label style="display:flex;align-items:center;justify-content:center;gap:10px;padding:14px;border:2px dashed #d1d5db;border-radius:10px;cursor:pointer;color:#64748b;font-size:13px" onmouseover="this.style.borderColor=\'#2563eb\'" onmouseout="this.style.borderColor=\'#d1d5db\'">' +
+            '<i class="fa-solid fa-cloud-arrow-up" style="font-size:20px;color:#2563eb"></i>' +
+            '<span>อัปโหลดรูปภาพ (สูงสุด 10 รูป)</span>' +
+            '<input id="img-file-input" type="file" accept="image/*" multiple style="display:none" onchange="uploadImages(this.files)">' +
+          '</label>' +
+        '</div>' +
+      '</div>' +
+    '</div>' +
+  '</div>';
+}
+
+async function openImageManager(resourceId, resource) {
+  _imgProduct = { id: resourceId, resource: resource };
+  document.getElementById('img-manager-modal').style.display = 'flex';
+  document.body.style.overflow = 'hidden';
+  await loadImages();
+}
+
+function closeImageManager() {
+  document.getElementById('img-manager-modal').style.display = 'none';
+  document.body.style.overflow = '';
+  _imgProduct = null;
+  _imgImages = [];
+  document.getElementById('products-root')?.remove();
+  loadProducts();
+}
+
+async function loadImages() {
+  var grid = document.getElementById('img-grid');
+  grid.innerHTML = '<div style="grid-column:span 3;text-align:center;padding:24px;color:#94a3b8"><i class="fa-solid fa-circle-notch fa-spin"></i></div>';
+  try {
+    _imgImages = await adminGet('/api/' + _imgProduct.resource + '/' + _imgProduct.id + '/images');
+  } catch (e) {
+    _imgImages = [];
+  }
+  renderImageGrid();
+}
+
+function renderImageGrid() {
+  var grid = document.getElementById('img-grid');
+  var label = document.getElementById('img-count-label');
+  var count = _imgImages.length;
+  label.textContent = count + '/10';
+
+  var uploadArea = document.getElementById('img-upload-area');
+  uploadArea.style.display = count >= 10 ? 'none' : 'block';
+
+  if (count === 0) {
+    grid.innerHTML = '<div style="grid-column:span 3;text-align:center;padding:32px;color:#cbd5e1"><i class="fa-solid fa-images" style="font-size:36px;margin-bottom:8px;display:block"></i>ยังไม่มีรูปภาพ</div>';
+    return;
+  }
+
+  grid.innerHTML = _imgImages.map(function (img) {
+    return '<div class="img-cell" style="position:relative;aspect-ratio:1;border-radius:10px;overflow:hidden;background:#f1f5f9;cursor:pointer">' +
+      '<img src="' + escH(img.url) + '" style="width:100%;height:100%;object-fit:cover">' +
+      (img.isMain ? '<span style="position:absolute;top:6px;left:6px;background:#f59e0b;color:#fff;font-size:10px;font-weight:700;padding:2px 8px;border-radius:999px;pointer-events:none"><i class="fa-solid fa-star" style="margin-right:3px"></i>หลัก</span>' : '') +
+      '<div class="img-overlay" style="position:absolute;inset:0;background:rgba(0,0,0,0);transition:.2s;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px">' +
+        (!img.isMain ? '<button class="btn" onclick="setMainImage(\'' + img.id + '\')" style="background:#f59e0b;color:#fff;font-size:11px;padding:5px 10px">ตั้งเป็นหลัก</button>' : '') +
+        '<button class="btn" onclick="deleteImage(\'' + img.id + '\')" style="background:#ef4444;color:#fff;font-size:11px;padding:5px 10px">ลบ</button>' +
+      '</div>' +
+    '</div>';
+  }).join('');
+
+  grid.querySelectorAll('.img-cell').forEach(function (cell) {
+    var overlay = cell.querySelector('.img-overlay');
+    cell.addEventListener('mouseenter', function () {
+      if (overlay) overlay.style.background = 'rgba(0,0,0,0.55)';
+    });
+    cell.addEventListener('mouseleave', function () {
+      if (overlay) overlay.style.background = 'rgba(0,0,0,0)';
+    });
+  });
+}
+
+async function uploadImages(files) {
+  if (!files || files.length === 0) return;
+  var remaining = 10 - _imgImages.length;
+  var toUpload = Array.from(files).slice(0, remaining);
+  for (var i = 0; i < toUpload.length; i++) {
+    var fd = new FormData();
+    fd.append('file', toUpload[i]);
+    try {
+      var res = await fetch(API + '/api/' + _imgProduct.resource + '/' + _imgProduct.id + '/images', {
+        method: 'POST',
+        headers: adminBearerHeader(),
+        body: fd
+      });
+      if (!res.ok) throw new Error('อัปโหลดล้มเหลว');
+      showToast('อัปโหลดสำเร็จ ' + (i + 1) + '/' + toUpload.length);
+    } catch (e) {
+      showToast('อัปโหลดล้มเหลว: ' + e.message, 'error');
+    }
+  }
+  document.getElementById('img-file-input').value = '';
+  await loadImages();
+}
+
+async function setMainImage(imageId) {
+  try {
+    await adminPatch('/api/' + _imgProduct.resource + '/images/' + imageId);
+    showToast('ตั้งเป็นรูปหลักแล้ว');
+    await loadImages();
+  } catch (e) {
+    showToast(e.message, 'error');
+  }
+}
+
+async function deleteImage(imageId) {
+  if (!confirm('ลบรูปภาพนี้?')) return;
+  try {
+    await adminDelete('/api/' + _imgProduct.resource + '/images/' + imageId);
+    showToast('ลบรูปภาพแล้ว');
+    await loadImages();
+  } catch (e) {
+    showToast(e.message, 'error');
+  }
+}
+
+// ──────────────────────────────────────────────────────────────
+// Utils
+// ──────────────────────────────────────────────────────────────
+function escH(s) {
+  return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+</script>
+</body>
+</html>

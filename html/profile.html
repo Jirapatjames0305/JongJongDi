@@ -1,0 +1,686 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>โปรไฟล์ – JongJongDi</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Prompt', sans-serif; background: #f8fafc; min-height: 100vh; padding-top: 80px; }
+    input:focus, textarea:focus { outline: none; border-color: #2563eb !important; box-shadow: 0 0 0 3px rgba(37,99,235,0.12); }
+    .tab-btn { white-space: nowrap; padding: 10px 18px; border: none; background: none; font-family: 'Prompt', sans-serif; font-size: 14px; font-weight: 500; color: #64748b; cursor: pointer; border-bottom: 2px solid transparent; transition: color .2s, border-color .2s; }
+    .tab-btn.active { color: #2563eb; border-bottom-color: #2563eb; font-weight: 600; }
+    .tab-btn:hover { color: #2563eb; }
+    .card { background: #fff; border-radius: 16px; border: 1px solid #f1f5f9; box-shadow: 0 1px 6px rgba(0,0,0,.05); padding: 24px; }
+    .form-label { display: block; font-size: 13px; font-weight: 600; color: #374151; margin-bottom: 6px; }
+    .form-input { width: 100%; padding: 10px 14px; border: 1.5px solid #e2e8f0; border-radius: 10px; font-family: 'Prompt', sans-serif; font-size: 14px; color: #1e293b; transition: border-color .2s, box-shadow .2s; }
+    .btn-primary { padding: 10px 24px; background: #2563eb; color: #fff; border: none; border-radius: 10px; font-family: 'Prompt', sans-serif; font-size: 14px; font-weight: 600; cursor: pointer; transition: background .2s; }
+    .btn-primary:hover { background: #1d4ed8; }
+    .btn-secondary { padding: 10px 24px; background: #f1f5f9; color: #475569; border: none; border-radius: 10px; font-family: 'Prompt', sans-serif; font-size: 14px; font-weight: 500; cursor: pointer; transition: background .2s; }
+    .btn-secondary:hover { background: #e2e8f0; }
+    .btn-danger { padding: 8px 16px; background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; border-radius: 8px; font-family: 'Prompt', sans-serif; font-size: 13px; font-weight: 500; cursor: pointer; transition: background .2s; }
+    .btn-danger:hover { background: #fee2e2; }
+    .spin { animation: spin .8s linear infinite; }
+    @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+    .booking-card { background: #fff; border-radius: 14px; border: 1px solid #f1f5f9; box-shadow: 0 1px 4px rgba(0,0,0,.05); overflow: hidden; display: flex; gap: 0; }
+    @media (max-width: 600px) { .booking-card { flex-direction: column; } }
+    .coupon-card { background: #fff; border-radius: 14px; border: 1.5px dashed #e2e8f0; padding: 16px 20px; display: flex; align-items: center; gap: 16px; }
+    .credit-card { border-radius: 16px; padding: 22px; color: #fff; position: relative; overflow: hidden; min-height: 160px; }
+  </style>
+</head>
+<body>
+
+  <div id="main-content" style="max-width:860px;margin:0 auto;padding:24px 16px 48px;">
+
+    <!-- Profile Header -->
+    <div id="profile-header" class="card" style="margin-bottom:24px;display:flex;align-items:center;gap:20px;flex-wrap:wrap;">
+      <div id="avatar-circle" style="width:64px;height:64px;border-radius:50%;background:linear-gradient(135deg,#2563eb,#1d4ed8);display:flex;align-items:center;justify-content:center;font-size:26px;font-weight:700;color:#fff;flex-shrink:0;"></div>
+      <div style="flex:1;min-width:0;">
+        <div id="user-name" style="font-size:18px;font-weight:700;color:#1e293b;margin-bottom:4px;"></div>
+        <div id="user-phone" style="font-size:13px;color:#64748b;display:flex;align-items:center;gap:8px;flex-wrap:wrap;"></div>
+      </div>
+      <button onclick="doLogout()" class="btn-secondary" style="font-size:13px;">
+        <i class="fa-solid fa-right-from-bracket" style="margin-right:6px;"></i>ออกจากระบบ
+      </button>
+    </div>
+
+    <!-- Tab navigation -->
+    <div style="background:#fff;border-radius:14px;border:1px solid #f1f5f9;box-shadow:0 1px 4px rgba(0,0,0,.04);margin-bottom:24px;overflow-x:auto;">
+      <div style="display:flex;border-bottom:1px solid #f1f5f9;padding:0 8px;min-width:max-content;">
+        <button class="tab-btn" data-tab="upcoming" onclick="switchTab('upcoming')">
+          <i class="fa-solid fa-clock" style="margin-right:6px;"></i>ใกล้มาถึง
+        </button>
+        <button class="tab-btn" data-tab="bookings" onclick="switchTab('bookings')">
+          <i class="fa-solid fa-calendar-days" style="margin-right:6px;"></i>การจองของฉัน
+        </button>
+        <button class="tab-btn" data-tab="coupons" onclick="switchTab('coupons')">
+          <i class="fa-solid fa-ticket" style="margin-right:6px;"></i>คูปอง
+        </button>
+        <button class="tab-btn" data-tab="vouchers" onclick="switchTab('vouchers')">
+          <i class="fa-solid fa-credit-card" style="margin-right:6px;"></i>บัตรของฉัน
+        </button>
+        <button class="tab-btn" data-tab="favorites" onclick="switchTab('favorites')">
+          <i class="fa-solid fa-heart" style="margin-right:6px;"></i>รายการโปรด
+        </button>
+        <button class="tab-btn" data-tab="profile" onclick="switchTab('profile')">
+          <i class="fa-solid fa-user-pen" style="margin-right:6px;"></i>ข้อมูลส่วนตัว
+        </button>
+      </div>
+    </div>
+
+    <!-- Tab content -->
+    <div id="tab-content"></div>
+
+  </div>
+
+  <script src="_lib.js"></script>
+  <script>
+    // ─── Auth guard ──────────────────────────────────────────────────────
+    const session = getUserSession();
+    if (!session) {
+      location.href = `login.html?redirect=${encodeURIComponent(location.pathname + location.search)}`;
+    }
+
+    const lang = getLang();
+    const user = session;
+
+    // ─── Init page (navbar/footer) ────────────────────────────────────────
+    initPage({ base: '' });
+
+    // ─── Profile header ───────────────────────────────────────────────────
+    const firstName = (user.name || '').trim().charAt(0).toUpperCase() || '?';
+    document.getElementById('avatar-circle').textContent = firstName;
+    document.getElementById('user-name').textContent = user.name || '';
+    let metaParts = [];
+    if (user.phone) metaParts.push(`<i class="fa-solid fa-phone" style="color:#94a3b8;font-size:11px;"></i> ${user.phone}`);
+    if (user.email) metaParts.push(`<i class="fa-solid fa-envelope" style="color:#94a3b8;font-size:11px;"></i> ${user.email}`);
+    document.getElementById('user-phone').innerHTML = metaParts.join('<span style="color:#e2e8f0;">·</span>');
+
+    function doLogout() {
+      clearUserSession();
+      location.href = 'index.html';
+    }
+
+    // ─── Tab routing ──────────────────────────────────────────────────────
+    let currentTab = getQP('tab') || 'upcoming';
+    const loaded = {};
+
+    function switchTab(tab) {
+      currentTab = tab;
+      history.replaceState(null, '', `?tab=${tab}`);
+      document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.tab === tab);
+      });
+      if (!loaded[tab]) {
+        loaded[tab] = true;
+        renderTab(tab);
+      } else {
+        // re-render to refresh data
+        renderTab(tab);
+      }
+    }
+
+    function renderTab(tab) {
+      const content = document.getElementById('tab-content');
+      content.innerHTML = `<div style="text-align:center;padding:60px 0;color:#94a3b8;"><i class="fa-solid fa-circle-notch fa-spin" style="font-size:28px;"></i></div>`;
+      switch (tab) {
+        case 'upcoming':  renderUpcoming(content); break;
+        case 'bookings':  renderBookings(content); break;
+        case 'coupons':   renderCoupons(content); break;
+        case 'vouchers':  renderVouchers(content); break;
+        case 'favorites': renderFavorites(content); break;
+        case 'profile':   renderProfile(content); break;
+      }
+    }
+
+    // Initialize
+    switchTab(currentTab);
+
+    // ─── UPCOMING TAB ─────────────────────────────────────────────────────
+    async function renderUpcoming(content) {
+      try {
+        const bookings = await apiAuth('/api/users/me/bookings');
+        const today = new Date(); today.setHours(0, 0, 0, 0);
+
+        const upcoming = (bookings || []).filter(b => {
+          const status = b.status;
+          if (status !== 'CONFIRMED' && status !== 'PENDING_CONFIRM') return false;
+          const dateStr = b.checkIn || b.departureDate || b.bookingDate;
+          if (!dateStr) return false;
+          return new Date(dateStr) >= today;
+        }).sort((a, b) => {
+          const da = new Date(a.checkIn || a.departureDate || a.bookingDate);
+          const db = new Date(b.checkIn || b.departureDate || b.bookingDate);
+          return da - db;
+        });
+
+        if (!upcoming.length) {
+          content.innerHTML = emptyState('fa-calendar-xmark', 'ไม่มีการจองที่ใกล้มาถึง', 'การจองที่ยืนยันแล้วและวันที่ยังไม่ผ่านจะปรากฏที่นี่');
+          return;
+        }
+
+        content.innerHTML = upcoming.map(b => {
+          const dateStr = b.checkIn || b.departureDate || b.bookingDate;
+          const daysLeft = Math.ceil((new Date(dateStr) - today) / 86400000);
+          let countdownLabel, countdownStyle;
+          if (daysLeft === 0) {
+            countdownLabel = 'วันนี้!';
+            countdownStyle = 'background:#fef3c7;color:#b45309;';
+          } else if (daysLeft === 1) {
+            countdownLabel = 'พรุ่งนี้!';
+            countdownStyle = 'background:#fee2e2;color:#dc2626;';
+          } else {
+            countdownLabel = `อีก ${daysLeft} วัน`;
+            countdownStyle = 'background:#dbeafe;color:#1d4ed8;';
+          }
+          const name = b.roomName || b.tourName || b.name || b.refNumber || '—';
+          const img = b.imageUrl || b.image;
+          const checkOut = b.checkOut ? ` – ${fmtDate(b.checkOut)}` : '';
+
+          return `<div class="booking-card" style="margin-bottom:14px;">
+            ${img ? `<img src="${img}" alt="" style="width:120px;height:120px;object-fit:cover;flex-shrink:0;">` : `<div style="width:120px;height:120px;background:#f1f5f9;display:flex;align-items:center;justify-content:center;flex-shrink:0;"><i class="fa-solid fa-image" style="color:#cbd5e1;font-size:24px;"></i></div>`}
+            <div style="padding:16px;flex:1;min-width:0;">
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-bottom:8px;">
+                <span style="${countdownStyle}padding:3px 12px;border-radius:9999px;font-size:12px;font-weight:700;"><i class="fa-solid fa-hourglass-half" style="margin-right:4px;"></i>${countdownLabel}</span>
+                ${statusBadge(b.status)}
+              </div>
+              <div style="font-weight:700;color:#1e293b;font-size:15px;margin-bottom:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${name}</div>
+              <div style="font-size:13px;color:#64748b;margin-bottom:12px;"><i class="fa-regular fa-calendar" style="margin-right:4px;color:#2563eb;"></i>${fmtDate(dateStr)}${checkOut}</div>
+              <a href="booking-detail.html?num=${b.refNumber || b.id}" style="font-size:13px;color:#2563eb;font-weight:600;text-decoration:none;display:inline-flex;align-items:center;gap:4px;">ดูรายละเอียด <i class="fa-solid fa-chevron-right" style="font-size:10px;"></i></a>
+            </div>
+          </div>`;
+        }).join('');
+      } catch (e) {
+        content.innerHTML = errorState('ไม่สามารถโหลดข้อมูลได้');
+      }
+    }
+
+    // ─── BOOKINGS TAB ─────────────────────────────────────────────────────
+    async function renderBookings(content) {
+      try {
+        const bookings = await apiAuth('/api/users/me/bookings');
+        if (!bookings || !bookings.length) {
+          content.innerHTML = emptyState('fa-calendar-days', 'ยังไม่มีประวัติการจอง', 'เมื่อคุณทำการจอง จะปรากฏที่นี่');
+          return;
+        }
+
+        content.innerHTML = bookings.map(b => {
+          const name = b.roomName || b.tourName || b.name || '—';
+          const img = b.imageUrl || b.image;
+          const dateStr = b.checkIn || b.departureDate || b.bookingDate;
+          const checkOut = b.checkOut ? ` – ${fmtDate(b.checkOut)}` : '';
+          const amount = b.totalAmount || b.amount;
+
+          return `<div class="booking-card" style="margin-bottom:14px;">
+            ${img ? `<img src="${img}" alt="" style="width:110px;height:110px;object-fit:cover;flex-shrink:0;">` : `<div style="width:110px;height:110px;background:#f1f5f9;display:flex;align-items:center;justify-content:center;flex-shrink:0;"><i class="fa-solid fa-image" style="color:#cbd5e1;font-size:22px;"></i></div>`}
+            <div style="padding:14px 16px;flex:1;min-width:0;display:flex;flex-direction:column;justify-content:space-between;gap:6px;">
+              <div>
+                <div style="font-weight:700;color:#1e293b;font-size:14px;margin-bottom:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${name}</div>
+                ${dateStr ? `<div style="font-size:12px;color:#64748b;"><i class="fa-regular fa-calendar" style="margin-right:4px;color:#2563eb;"></i>${fmtDate(dateStr)}${checkOut}</div>` : ''}
+                ${amount ? `<div style="font-size:12px;color:#64748b;margin-top:2px;"><i class="fa-solid fa-thai-baht-sign" style="margin-right:4px;color:#f59e0b;"></i>${fmt(amount)} บาท</div>` : ''}
+              </div>
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;">
+                ${statusBadge(b.status)}
+                <a href="booking-detail.html?num=${b.refNumber || b.id}" style="font-size:13px;color:#2563eb;font-weight:600;text-decoration:none;display:inline-flex;align-items:center;gap:4px;">รายละเอียด <i class="fa-solid fa-chevron-right" style="font-size:10px;"></i></a>
+              </div>
+            </div>
+          </div>`;
+        }).join('');
+      } catch (e) {
+        content.innerHTML = errorState('ไม่สามารถโหลดข้อมูลได้');
+      }
+    }
+
+    // ─── COUPONS TAB ─────────────────────────────────────────────────────
+    async function renderCoupons(content) {
+      try {
+        const [vouchers, referral] = await Promise.allSettled([
+          apiAuth('/api/users/me/vouchers'),
+          apiAuth('/api/users/me/referral'),
+        ]);
+
+        const voucherList = vouchers.value || [];
+        const refData = referral.value || {};
+        const refCode = refData.referralCode || refData.code || '';
+        const refStats = refData.stats || {};
+
+        content.innerHTML = `
+          <!-- Referral section -->
+          <div class="card" style="margin-bottom:20px;">
+            <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
+              <div style="width:42px;height:42px;background:#dbeafe;border-radius:12px;display:flex;align-items:center;justify-content:center;">
+                <i class="fa-solid fa-user-group" style="color:#2563eb;font-size:18px;"></i>
+              </div>
+              <div>
+                <div style="font-weight:700;color:#1e293b;font-size:15px;">โปรแกรมแนะนำเพื่อน</div>
+                <div style="font-size:12px;color:#64748b;">แชร์โค้ดให้เพื่อน รับส่วนลดเมื่อเพื่อนสมัครสมาชิก</div>
+              </div>
+            </div>
+            ${refCode ? `
+              <div style="background:#f8fafc;border-radius:12px;padding:14px 16px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+                <div style="flex:1;">
+                  <div style="font-size:11px;color:#94a3b8;font-weight:500;margin-bottom:3px;">รหัสแนะนำของคุณ</div>
+                  <div style="font-size:20px;font-weight:700;color:#2563eb;letter-spacing:3px;">${refCode}</div>
+                </div>
+                <button onclick="copyRefCode('${refCode}')" style="padding:9px 18px;background:#2563eb;color:#fff;border:none;border-radius:9px;font-family:'Prompt',sans-serif;font-size:13px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:6px;">
+                  <i class="fa-solid fa-copy"></i> คัดลอก
+                </button>
+              </div>
+              ${refStats.used !== undefined ? `<div style="margin-top:12px;font-size:13px;color:#64748b;">เพื่อนที่สมัครแล้ว: <strong style="color:#1e293b;">${refStats.used || 0}</strong> คน</div>` : ''}
+            ` : '<div style="font-size:13px;color:#94a3b8;">ยังไม่มีรหัสแนะนำ กรุณาติดต่อทีมงาน</div>'}
+          </div>
+
+          <!-- Claim form -->
+          <div class="card" style="margin-bottom:20px;">
+            <div style="font-weight:700;color:#1e293b;font-size:15px;margin-bottom:14px;">
+              <i class="fa-solid fa-ticket" style="color:#f59e0b;margin-right:8px;"></i>แลกคูปอง
+            </div>
+            <div style="display:flex;gap:10px;flex-wrap:wrap;">
+              <input id="claim-code" type="text" oninput="this.value=this.value.toUpperCase()" placeholder="กรอกรหัสคูปอง"
+                style="flex:1;min-width:180px;padding:10px 14px;border:1.5px solid #e2e8f0;border-radius:10px;font-family:'Prompt',sans-serif;font-size:14px;color:#1e293b;transition:border-color .2s,box-shadow .2s;">
+              <button onclick="claimCoupon()" class="btn-primary" style="display:flex;align-items:center;gap:6px;">
+                <i class="fa-solid fa-gift"></i> แลก
+              </button>
+            </div>
+            <div id="claim-msg" style="display:none;margin-top:10px;font-size:13px;border-radius:9px;padding:10px 14px;"></div>
+          </div>
+
+          <!-- Coupon list -->
+          <div style="font-weight:700;color:#1e293b;font-size:15px;margin-bottom:14px;">
+            <i class="fa-solid fa-tags" style="color:#2563eb;margin-right:8px;"></i>คูปองของฉัน (${voucherList.length})
+          </div>
+          ${voucherList.length ? voucherList.map(v => couponCard(v)).join('') : `<div style="text-align:center;padding:40px 0;color:#94a3b8;"><i class="fa-solid fa-ticket" style="font-size:28px;display:block;margin-bottom:10px;"></i><div>ยังไม่มีคูปอง</div></div>`}
+        `;
+      } catch (e) {
+        content.innerHTML = errorState('ไม่สามารถโหลดข้อมูลได้');
+      }
+    }
+
+    function couponCard(v) {
+      const isUsed = v.status === 'USED';
+      const isExpired = v.status === 'EXPIRED' || (v.expiresAt && new Date(v.expiresAt) < new Date());
+      const inactive = isUsed || isExpired;
+      const discount = v.discountAmount ? `฿${fmt(v.discountAmount)}` : (v.discountPercent ? `${v.discountPercent}%` : '—');
+      return `<div class="coupon-card" style="margin-bottom:12px;${inactive ? 'opacity:.6;' : ''}">
+        <div style="width:52px;height:52px;border-radius:14px;background:${inactive ? '#f1f5f9' : 'linear-gradient(135deg,#f59e0b,#d97706)'};display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+          <i class="fa-solid fa-ticket" style="color:${inactive ? '#94a3b8' : '#fff'};font-size:20px;"></i>
+        </div>
+        <div style="flex:1;min-width:0;">
+          <div style="font-weight:700;color:#1e293b;font-size:14px;margin-bottom:2px;">${v.code || v.name || '—'}</div>
+          <div style="font-size:13px;color:#64748b;margin-bottom:4px;">${v.description || ''}</div>
+          <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+            <span style="font-size:13px;font-weight:700;color:#f59e0b;">ส่วนลด ${discount}</span>
+            ${v.expiresAt ? `<span style="font-size:11px;color:#94a3b8;"><i class="fa-regular fa-clock" style="margin-right:3px;"></i>หมดอายุ ${fmtDate(v.expiresAt)}</span>` : ''}
+          </div>
+        </div>
+        <div>${isUsed ? `<span style="background:#f1f5f9;color:#94a3b8;font-size:11px;font-weight:600;padding:3px 10px;border-radius:9999px;">ใช้แล้ว</span>` : isExpired ? `<span style="background:#fef2f2;color:#dc2626;font-size:11px;font-weight:600;padding:3px 10px;border-radius:9999px;">หมดอายุ</span>` : `<span style="background:#dcfce7;color:#15803d;font-size:11px;font-weight:600;padding:3px 10px;border-radius:9999px;">ใช้ได้</span>`}</div>
+      </div>`;
+    }
+
+    async function claimCoupon() {
+      const code = document.getElementById('claim-code').value.trim();
+      const msg = document.getElementById('claim-msg');
+      if (!code) return;
+      msg.style.display = 'none';
+      try {
+        await apiAuth('/api/users/me/vouchers/claim', { method: 'POST', body: JSON.stringify({ code }) });
+        msg.style.cssText = 'display:block;background:#dcfce7;color:#15803d;border-radius:9px;padding:10px 14px;font-size:13px;margin-top:10px;';
+        msg.innerHTML = `<i class="fa-solid fa-circle-check" style="margin-right:6px;"></i>แลกคูปองสำเร็จ!`;
+        document.getElementById('claim-code').value = '';
+        // Refresh coupons tab
+        setTimeout(() => { delete loaded['coupons']; switchTab('coupons'); }, 1200);
+      } catch (e) {
+        msg.style.cssText = 'display:block;background:#fef2f2;color:#dc2626;border-radius:9px;padding:10px 14px;font-size:13px;margin-top:10px;';
+        msg.innerHTML = `<i class="fa-solid fa-circle-exclamation" style="margin-right:6px;"></i>${e.message || 'รหัสคูปองไม่ถูกต้อง'}`;
+      }
+    }
+
+    function copyRefCode(code) {
+      navigator.clipboard.writeText(code).then(() => {
+        showToast('คัดลอกรหัสแล้ว!');
+      }).catch(() => {
+        showToast(code);
+      });
+    }
+
+    // ─── VOUCHERS (CARDS) TAB ─────────────────────────────────────────────
+    async function renderVouchers(content) {
+      try {
+        const cards = await apiAuth('/api/users/me/cards');
+        const cardList = cards || [];
+
+        content.innerHTML = `
+          <div style="margin-bottom:20px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
+            <div style="font-weight:700;color:#1e293b;font-size:15px;"><i class="fa-solid fa-credit-card" style="color:#2563eb;margin-right:8px;"></i>บัตรของฉัน (${cardList.length})</div>
+            <button onclick="showAddCardForm()" class="btn-primary" style="font-size:13px;display:flex;align-items:center;gap:6px;">
+              <i class="fa-solid fa-plus"></i> เพิ่มบัตร
+            </button>
+          </div>
+
+          <div id="add-card-form" style="display:none;" class="card" style="margin-bottom:20px;">
+            <div style="font-weight:700;color:#1e293b;margin-bottom:16px;">เพิ่มบัตรใหม่</div>
+            <div style="display:grid;gap:12px;">
+              <div>
+                <label class="form-label">หมายเลขบัตร</label>
+                <input id="card-number" type="text" maxlength="19" class="form-input" placeholder="XXXX XXXX XXXX XXXX" oninput="formatCardNumber(this)">
+              </div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+                <div>
+                  <label class="form-label">ชื่อผู้ถือบัตร</label>
+                  <input id="card-holder" type="text" class="form-input" placeholder="JOHN SMITH">
+                </div>
+                <div>
+                  <label class="form-label">วันหมดอายุ (MM/YY)</label>
+                  <input id="card-expiry" type="text" maxlength="5" class="form-input" placeholder="MM/YY" oninput="formatExpiry(this)">
+                </div>
+              </div>
+              <div style="display:flex;gap:10px;flex-wrap:wrap;">
+                <button onclick="addCard()" class="btn-primary">บันทึกบัตร</button>
+                <button onclick="document.getElementById('add-card-form').style.display='none'" class="btn-secondary">ยกเลิก</button>
+              </div>
+              <div id="card-msg" style="display:none;font-size:13px;border-radius:9px;padding:10px 14px;"></div>
+            </div>
+          </div>
+
+          <div id="cards-list">
+            ${cardList.length ? cardList.map(c => creditCardHtml(c)).join('') : `<div style="text-align:center;padding:48px 0;color:#94a3b8;"><i class="fa-solid fa-credit-card" style="font-size:36px;display:block;margin-bottom:12px;opacity:.4;"></i><div style="font-size:14px;">ยังไม่มีบัตรที่บันทึกไว้</div></div>`}
+          </div>
+        `;
+      } catch (e) {
+        content.innerHTML = errorState('ไม่สามารถโหลดข้อมูลได้');
+      }
+    }
+
+    function creditCardHtml(c) {
+      const gradients = [
+        'linear-gradient(135deg,#2563eb,#1d4ed8)',
+        'linear-gradient(135deg,#0891b2,#0e7490)',
+        'linear-gradient(135deg,#7c3aed,#6d28d9)',
+        'linear-gradient(135deg,#db2777,#be185d)',
+        'linear-gradient(135deg,#059669,#047857)',
+      ];
+      const grad = gradients[(c.id || 0) % gradients.length] || gradients[0];
+      const masked = c.lastFour ? `•••• •••• •••• ${c.lastFour}` : (c.cardNumber ? '•••• •••• •••• ' + c.cardNumber.slice(-4) : '•••• •••• •••• ••••');
+      const brand = c.brand || c.type || 'CARD';
+      const isDefault = c.isDefault;
+
+      return `<div style="margin-bottom:16px;">
+        <div class="credit-card" style="background:${grad};max-width:360px;">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:24px;">
+            <div style="font-size:13px;font-weight:600;opacity:.9;">${brand.toUpperCase()}</div>
+            ${isDefault ? `<span style="background:rgba(255,255,255,.25);font-size:11px;font-weight:700;padding:3px 10px;border-radius:9999px;">ค่าเริ่มต้น</span>` : ''}
+          </div>
+          <div style="font-size:18px;font-weight:600;letter-spacing:3px;margin-bottom:20px;">${masked}</div>
+          <div style="display:flex;justify-content:space-between;align-items:flex-end;">
+            <div>
+              <div style="font-size:10px;opacity:.7;margin-bottom:2px;">CARD HOLDER</div>
+              <div style="font-size:13px;font-weight:600;">${(c.holderName || c.holder || 'N/A').toUpperCase()}</div>
+            </div>
+            <div style="text-align:right;">
+              <div style="font-size:10px;opacity:.7;margin-bottom:2px;">EXPIRES</div>
+              <div style="font-size:13px;font-weight:600;">${c.expiryDate || c.expiry || '—'}</div>
+            </div>
+          </div>
+        </div>
+        <div style="max-width:360px;display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;">
+          ${!isDefault ? `<button onclick="setDefaultCard('${c.id}')" class="btn-secondary" style="font-size:12px;">ตั้งเป็นค่าเริ่มต้น</button>` : ''}
+          <button onclick="deleteCard('${c.id}')" class="btn-danger" style="font-size:12px;"><i class="fa-solid fa-trash" style="margin-right:4px;"></i>ลบ</button>
+        </div>
+      </div>`;
+    }
+
+    function showAddCardForm() {
+      const f = document.getElementById('add-card-form');
+      f.style.display = f.style.display === 'none' ? 'block' : 'none';
+    }
+
+    function formatCardNumber(input) {
+      let v = input.value.replace(/\D/g, '').slice(0, 16);
+      input.value = v.match(/.{1,4}/g)?.join(' ') || v;
+    }
+
+    function formatExpiry(input) {
+      let v = input.value.replace(/\D/g, '').slice(0, 4);
+      if (v.length > 2) v = v.slice(0, 2) + '/' + v.slice(2);
+      input.value = v;
+    }
+
+    async function addCard() {
+      const number = document.getElementById('card-number').value.replace(/\s/g, '');
+      const holder = document.getElementById('card-holder').value.trim();
+      const expiry = document.getElementById('card-expiry').value.trim();
+      const msg = document.getElementById('card-msg');
+      msg.style.display = 'none';
+      if (!number || number.length < 13 || !holder || !expiry) {
+        msg.style.cssText = 'display:block;background:#fef2f2;color:#dc2626;border-radius:9px;padding:10px 14px;font-size:13px;';
+        msg.textContent = 'กรุณากรอกข้อมูลให้ครบถ้วน';
+        return;
+      }
+      try {
+        await apiAuth('/api/users/me/cards', { method: 'POST', body: JSON.stringify({ cardNumber: number, holderName: holder, expiryDate: expiry }) });
+        showToast('เพิ่มบัตรสำเร็จ!');
+        delete loaded['vouchers'];
+        switchTab('vouchers');
+      } catch (e) {
+        msg.style.cssText = 'display:block;background:#fef2f2;color:#dc2626;border-radius:9px;padding:10px 14px;font-size:13px;';
+        msg.textContent = e.message || 'เกิดข้อผิดพลาด';
+      }
+    }
+
+    async function setDefaultCard(id) {
+      try {
+        await apiAuth(`/api/users/me/cards/${id}/default`, { method: 'PATCH' });
+        showToast('ตั้งค่าสำเร็จ!');
+        delete loaded['vouchers'];
+        switchTab('vouchers');
+      } catch (e) { showToast(e.message || 'เกิดข้อผิดพลาด'); }
+    }
+
+    async function deleteCard(id) {
+      if (!confirm('ต้องการลบบัตรนี้?')) return;
+      try {
+        await apiAuth(`/api/users/me/cards/${id}`, { method: 'DELETE' });
+        showToast('ลบบัตรสำเร็จ');
+        delete loaded['vouchers'];
+        switchTab('vouchers');
+      } catch (e) { showToast(e.message || 'เกิดข้อผิดพลาด'); }
+    }
+
+    // ─── FAVORITES TAB ────────────────────────────────────────────────────
+    async function renderFavorites(content) {
+      try {
+        const favs = await apiAuth('/api/favorites');
+        const list = favs || [];
+        if (!list.length) {
+          content.innerHTML = emptyState('fa-heart', 'ยังไม่มีรายการโปรด', 'กดไอคอนหัวใจบนที่พักหรือทัวร์ที่ชอบเพื่อบันทึกไว้ที่นี่');
+          return;
+        }
+        content.innerHTML = `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:16px;">
+          ${list.map(f => {
+            const name = f.nameTh || f.nameEn || f.name || '—';
+            const img = f.imageUrl || f.image;
+            const type = f.type === 'ROOM' ? 'ที่พัก' : f.type === 'TOUR' ? 'ทัวร์' : f.type || '';
+            const href = f.type === 'ROOM' ? `room.html?slug=${f.slug}` : f.type === 'TOUR' ? `tour.html?slug=${f.slug}` : '#';
+            return `<div style="background:#fff;border-radius:14px;border:1px solid #f1f5f9;box-shadow:0 1px 4px rgba(0,0,0,.05);overflow:hidden;">
+              <a href="${href}" style="display:block;text-decoration:none;">
+                ${img ? `<img src="${img}" alt="${name}" style="width:100%;height:140px;object-fit:cover;">` : `<div style="width:100%;height:140px;background:#f1f5f9;display:flex;align-items:center;justify-content:center;"><i class="fa-solid fa-image" style="color:#cbd5e1;font-size:28px;"></i></div>`}
+              </a>
+              <div style="padding:12px;">
+                ${type ? `<span style="background:#dbeafe;color:#1d4ed8;font-size:10px;font-weight:700;padding:2px 8px;border-radius:9999px;margin-bottom:6px;display:inline-block;">${type}</span>` : ''}
+                <a href="${href}" style="display:block;font-weight:700;color:#1e293b;font-size:13px;text-decoration:none;margin-bottom:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${name}</a>
+                <button onclick="removeFavorite('${f.id}', this)" class="btn-danger" style="width:100%;font-size:12px;padding:7px;">
+                  <i class="fa-solid fa-heart-crack" style="margin-right:4px;"></i>นำออก
+                </button>
+              </div>
+            </div>`;
+          }).join('')}
+        </div>`;
+      } catch (e) {
+        content.innerHTML = errorState('ไม่สามารถโหลดข้อมูลได้');
+      }
+    }
+
+    async function removeFavorite(id, btn) {
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i>';
+      try {
+        await apiAuth(`/api/favorites/${id}`, { method: 'DELETE' });
+        showToast('นำออกจากรายการโปรดแล้ว');
+        delete loaded['favorites'];
+        switchTab('favorites');
+      } catch (e) {
+        showToast(e.message || 'เกิดข้อผิดพลาด');
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fa-solid fa-heart-crack" style="margin-right:4px;"></i>นำออก';
+      }
+    }
+
+    // ─── PROFILE TAB ─────────────────────────────────────────────────────
+    function renderProfile(content) {
+      content.innerHTML = `
+        <!-- Edit profile -->
+        <div class="card" style="margin-bottom:20px;">
+          <div style="font-weight:700;color:#1e293b;font-size:15px;margin-bottom:16px;">
+            <i class="fa-solid fa-user-pen" style="color:#2563eb;margin-right:8px;"></i>แก้ไขข้อมูลส่วนตัว
+          </div>
+          <div style="display:grid;gap:14px;">
+            <div>
+              <label class="form-label">ชื่อ-นามสกุล</label>
+              <input id="edit-name" type="text" class="form-input" value="${escHtml(user.name || '')}">
+            </div>
+            <div>
+              <label class="form-label">อีเมล (ไม่บังคับ)</label>
+              <input id="edit-email" type="email" class="form-input" value="${escHtml(user.email || '')}">
+            </div>
+            <div>
+              <label class="form-label">เบอร์โทรศัพท์</label>
+              <input type="tel" class="form-input" value="${escHtml(user.phone || '')}" disabled style="background:#f8fafc;color:#94a3b8;cursor:not-allowed;">
+            </div>
+          </div>
+          <div id="profile-msg" style="display:none;margin-top:12px;font-size:13px;border-radius:9px;padding:10px 14px;"></div>
+          <div style="margin-top:16px;">
+            <button onclick="saveProfile()" class="btn-primary">
+              <i class="fa-solid fa-floppy-disk" style="margin-right:6px;"></i>บันทึก
+            </button>
+          </div>
+        </div>
+
+        <!-- Change password -->
+        <div class="card">
+          <div style="font-weight:700;color:#1e293b;font-size:15px;margin-bottom:16px;">
+            <i class="fa-solid fa-lock" style="color:#2563eb;margin-right:8px;"></i>เปลี่ยนรหัสผ่าน
+          </div>
+          <div style="display:grid;gap:14px;">
+            <div>
+              <label class="form-label">รหัสผ่านปัจจุบัน</label>
+              <input id="current-password" type="password" class="form-input" autocomplete="current-password">
+            </div>
+            <div>
+              <label class="form-label">รหัสผ่านใหม่ (อย่างน้อย 6 ตัว)</label>
+              <input id="new-password" type="password" class="form-input" autocomplete="new-password">
+            </div>
+            <div>
+              <label class="form-label">ยืนยันรหัสผ่านใหม่</label>
+              <input id="confirm-new-password" type="password" class="form-input" autocomplete="new-password">
+            </div>
+          </div>
+          <div id="pwd-msg" style="display:none;margin-top:12px;font-size:13px;border-radius:9px;padding:10px 14px;"></div>
+          <div style="margin-top:16px;">
+            <button onclick="changePassword()" class="btn-primary">
+              <i class="fa-solid fa-key" style="margin-right:6px;"></i>เปลี่ยนรหัสผ่าน
+            </button>
+          </div>
+        </div>
+      `;
+    }
+
+    function escHtml(str) {
+      return str.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
+
+    async function saveProfile() {
+      const name = document.getElementById('edit-name').value.trim();
+      const email = document.getElementById('edit-email').value.trim();
+      const msg = document.getElementById('profile-msg');
+      msg.style.display = 'none';
+      try {
+        const payload = { name };
+        if (email) payload.email = email;
+        const updated = await apiAuth('/api/users/me', { method: 'PATCH', body: JSON.stringify(payload) });
+        // Update session
+        const currentSession = getUserSession();
+        if (currentSession) {
+          const mergedUser = { ...currentSession, ...updated };
+          saveUserSession(localStorage.getItem('jjd_user_token'), mergedUser);
+          // Update header
+          document.getElementById('user-name').textContent = mergedUser.name || '';
+          document.getElementById('avatar-circle').textContent = (mergedUser.name || '').trim().charAt(0).toUpperCase() || '?';
+        }
+        msg.style.cssText = 'display:block;background:#dcfce7;color:#15803d;border-radius:9px;padding:10px 14px;font-size:13px;';
+        msg.innerHTML = '<i class="fa-solid fa-circle-check" style="margin-right:6px;"></i>บันทึกข้อมูลสำเร็จ';
+      } catch (e) {
+        msg.style.cssText = 'display:block;background:#fef2f2;color:#dc2626;border-radius:9px;padding:10px 14px;font-size:13px;';
+        msg.textContent = e.message || 'เกิดข้อผิดพลาด';
+      }
+    }
+
+    async function changePassword() {
+      const currentPassword = document.getElementById('current-password').value;
+      const newPassword = document.getElementById('new-password').value;
+      const confirmNew = document.getElementById('confirm-new-password').value;
+      const msg = document.getElementById('pwd-msg');
+      msg.style.display = 'none';
+
+      if (!currentPassword || !newPassword || !confirmNew) {
+        msg.style.cssText = 'display:block;background:#fef2f2;color:#dc2626;border-radius:9px;padding:10px 14px;font-size:13px;';
+        msg.textContent = 'กรุณากรอกข้อมูลให้ครบ';
+        return;
+      }
+      if (newPassword.length < 6) {
+        msg.style.cssText = 'display:block;background:#fef2f2;color:#dc2626;border-radius:9px;padding:10px 14px;font-size:13px;';
+        msg.textContent = 'รหัสผ่านใหม่ต้องมีอย่างน้อย 6 ตัวอักษร';
+        return;
+      }
+      if (newPassword !== confirmNew) {
+        msg.style.cssText = 'display:block;background:#fef2f2;color:#dc2626;border-radius:9px;padding:10px 14px;font-size:13px;';
+        msg.textContent = 'รหัสผ่านใหม่ไม่ตรงกัน';
+        return;
+      }
+      try {
+        await apiAuth('/api/users/me/change-password', { method: 'POST', body: JSON.stringify({ currentPassword, newPassword }) });
+        msg.style.cssText = 'display:block;background:#dcfce7;color:#15803d;border-radius:9px;padding:10px 14px;font-size:13px;';
+        msg.innerHTML = '<i class="fa-solid fa-circle-check" style="margin-right:6px;"></i>เปลี่ยนรหัสผ่านสำเร็จ';
+        document.getElementById('current-password').value = '';
+        document.getElementById('new-password').value = '';
+        document.getElementById('confirm-new-password').value = '';
+      } catch (e) {
+        msg.style.cssText = 'display:block;background:#fef2f2;color:#dc2626;border-radius:9px;padding:10px 14px;font-size:13px;';
+        msg.textContent = e.message || 'เกิดข้อผิดพลาด';
+      }
+    }
+
+    // ─── Shared helpers ───────────────────────────────────────────────────
+    function emptyState(icon, title, desc) {
+      return `<div style="text-align:center;padding:64px 0;">
+        <div style="width:70px;height:70px;background:#f1f5f9;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 16px;">
+          <i class="fa-solid ${icon}" style="font-size:28px;color:#cbd5e1;"></i>
+        </div>
+        <div style="font-weight:700;color:#475569;font-size:15px;margin-bottom:6px;">${title}</div>
+        <div style="font-size:13px;color:#94a3b8;max-width:300px;margin:0 auto;">${desc}</div>
+      </div>`;
+    }
+
+    function errorState(msg) {
+      return `<div style="text-align:center;padding:48px 0;color:#dc2626;">
+        <i class="fa-solid fa-triangle-exclamation" style="font-size:28px;display:block;margin-bottom:10px;"></i>
+        <div style="font-size:14px;">${msg}</div>
+        <button onclick="switchTab(currentTab)" class="btn-secondary" style="margin-top:16px;font-size:13px;">ลองใหม่</button>
+      </div>`;
+    }
+  </script>
+</body>
+</html>

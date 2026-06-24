@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>จองทัวร์ — JongJongDi</title>
+  <meta name="description" content="ค้นหาและจองทัวร์ดำน้ำ ทัวร์ทะเล และทัวร์อื่นๆ ทั่วไทย">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script src="_lib.js"></script>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0;}
+    body{font-family:'Prompt',sans-serif;color:#334155;background:#f8fafc;-webkit-font-smoothing:antialiased;}
+    a{text-decoration:none;}
+    .container{max-width:1200px;margin:0 auto;padding:0 16px;}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    .spinner{display:inline-block;width:32px;height:32px;border:3px solid #e2e8f0;border-top-color:#0891b2;border-radius:50%;animation:spin .8s linear infinite;}
+    @keyframes fadeInUp{from{opacity:0;transform:translateY(16px);}to{opacity:1;transform:translateY(0);}}
+    .card-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:24px;}
+    @media(max-width:900px){.card-grid{grid-template-columns:repeat(2,1fr);}}
+    @media(max-width:600px){.card-grid{grid-template-columns:1fr;}}
+    @media(max-width:768px){#nav-links{display:none!important;}}
+  </style>
+</head>
+<body style="padding-top:80px;">
+
+<div class="container" style="padding-top:40px;padding-bottom:60px;">
+
+  <!-- Page header -->
+  <div style="margin-bottom:32px;">
+    <div style="display:inline-flex;align-items:center;gap:6px;background:#ecfeff;border:1px solid #a5f3fc;border-radius:9999px;padding:4px 14px;font-size:12px;font-weight:600;color:#0891b2;margin-bottom:12px;">
+      <i class="fa-solid fa-water-ladder"></i>
+      <span id="label-tours">Tours</span>
+    </div>
+    <h1 id="page-title" style="font-size:clamp(24px,4vw,36px);font-weight:700;color:#1e293b;margin-bottom:8px;">จองทัวร์</h1>
+    <p id="page-subtitle" style="font-size:15px;color:#64748b;line-height:1.6;">ทัวร์ดำน้ำ ทัวร์ทะเล และทัวร์อื่นๆ คัดสรรโดยทีมงาน JongJongDi</p>
+  </div>
+
+  <!-- Active filters -->
+  <div id="filter-bar" style="display:none;margin-bottom:24px;display:flex;flex-wrap:wrap;align-items:center;gap:8px;"></div>
+
+  <!-- Results -->
+  <div id="tour-grid-wrap">
+    <div style="text-align:center;padding:60px 0;">
+      <div class="spinner"></div>
+      <p style="margin-top:16px;color:#94a3b8;font-size:14px;">กำลังโหลดทัวร์...</p>
+    </div>
+  </div>
+
+</div>
+
+<script>
+(async function() {
+  const lang = getLang();
+  const q    = getQP('q');
+  const date = getQP('date');
+
+  // i18n page header
+  document.getElementById('label-tours').textContent = pick('Tours', 'Tours', lang);
+  document.getElementById('page-title').textContent  = pick('จองทัวร์', 'Book Tours', lang);
+  document.getElementById('page-subtitle').textContent = pick(
+    'ทัวร์ดำน้ำ ทัวร์ทะเล และทัวร์อื่นๆ คัดสรรโดยทีมงาน JongJongDi',
+    'Dive tours, sea tours, and more — hand-picked by JongJongDi',
+    lang
+  );
+
+  // Filter chips
+  const filterBar = document.getElementById('filter-bar');
+  const chips = [];
+  if (q) chips.push({ label: `<i class="fa-solid fa-magnifying-glass" style="margin-right:5px;"></i>${pick('ค้นหา', 'Search', lang)}: <strong>${q}</strong>`, key: 'q' });
+  if (date) chips.push({ label: `<i class="fa-regular fa-calendar" style="margin-right:5px;"></i>${pick('วันที่', 'Date', lang)}: <strong>${fmtDate(date)}</strong>`, key: 'date' });
+
+  if (chips.length) {
+    filterBar.style.display = 'flex';
+    chips.forEach(c => {
+      const chip = document.createElement('span');
+      chip.style.cssText = 'display:inline-flex;align-items:center;gap:6px;background:#eff6ff;border:1px solid #bfdbfe;color:#1d4ed8;border-radius:9999px;padding:5px 12px;font-size:13px;';
+      chip.innerHTML = c.label;
+      filterBar.appendChild(chip);
+    });
+    // Clear filters link
+    const clearUrl = new URLSearchParams();
+    const clearLink = document.createElement('a');
+    clearLink.href = 'tours.html';
+    clearLink.style.cssText = 'font-size:13px;color:#64748b;text-decoration:underline;margin-left:4px;';
+    clearLink.textContent = pick('ล้างตัวกรอง', 'Clear filters', lang);
+    filterBar.appendChild(clearLink);
+  }
+
+  // Fetch tours
+  const tours = await listTours({ q, date });
+  const wrap = document.getElementById('tour-grid-wrap');
+
+  if (!tours || tours.length === 0) {
+    wrap.innerHTML = `
+      <div style="text-align:center;padding:80px 20px;">
+        <div style="width:80px;height:80px;border-radius:50%;background:#ecfeff;display:flex;align-items:center;justify-content:center;margin:0 auto 20px;">
+          <i class="fa-solid fa-water-ladder" style="font-size:32px;color:#06b6d4;"></i>
+        </div>
+        <h3 style="font-size:18px;font-weight:600;color:#334155;margin-bottom:8px;">${pick('ไม่พบทัวร์', 'No tours found', lang)}</h3>
+        <p style="font-size:14px;color:#94a3b8;margin-bottom:20px;">${pick('ลองปรับตัวกรองหรือค้นหาใหม่อีกครั้ง', 'Try adjusting your filters or search again', lang)}</p>
+        ${q || date ? `<a href="tours.html" style="display:inline-flex;align-items:center;gap:8px;background:#0891b2;color:#fff;border-radius:10px;padding:10px 20px;font-size:14px;font-weight:600;">${pick('ดูทัวร์ทั้งหมด', 'View all tours', lang)}</a>` : ''}
+      </div>`;
+    return;
+  }
+
+  const grid = document.createElement('div');
+  grid.className = 'card-grid';
+  grid.style.animation = 'fadeInUp .5s ease-out';
+  grid.innerHTML = tours.map(tour => tourCardHTML(tour, lang, date)).join('');
+  wrap.innerHTML = '';
+  wrap.appendChild(grid);
+})();
+
+initPage({ base: '' });
+</script>
+</body>
+</html>

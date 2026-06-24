@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ข้อกำหนดและเงื่อนไข - JongJongDi</title>
+  <meta name="description" content="ข้อกำหนดและเงื่อนไขการใช้งาน JongJongDi">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script src="_lib.js"></script>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0;}
+    body{font-family:'Prompt',sans-serif;color:#334155;background:#f8fafc;-webkit-font-smoothing:antialiased;}
+    a{text-decoration:none;}
+    html{scroll-behavior:smooth;}
+    @media(max-width:768px){
+      #nav-links{display:none!important;}
+      #layout{flex-direction:column!important;}
+      #toc-sidebar{position:static!important;width:100%!important;margin-bottom:24px;}
+    }
+  </style>
+</head>
+<body>
+
+<!-- ─── Main ──────────────────────────────────────────────────────────────── -->
+<main style="padding-top:80px;">
+
+  <!-- ─── Header ───────────────────────────────────────────────────────── -->
+  <section style="background:#0f172a;padding:48px 16px 56px;text-align:center;">
+    <!-- Chip -->
+    <div id="header-chip" style="display:inline-flex;align-items:center;gap:8px;background:rgba(37,99,235,.25);border:1px solid rgba(37,99,235,.4);border-radius:9999px;padding:6px 18px;font-size:12px;color:#93c5fd;margin-bottom:20px;">
+      <i class="fa-solid fa-file-contract"></i>
+      <span></span>
+    </div>
+    <h1 id="header-title" style="font-size:clamp(24px,4vw,40px);font-weight:700;color:#fff;margin-bottom:12px;"></h1>
+    <p id="header-date" style="font-size:13px;color:#64748b;display:flex;align-items:center;justify-content:center;gap:6px;">
+      <i class="fa-solid fa-calendar-check" style="color:#3b82f6;"></i>
+      <span></span>
+    </p>
+  </section>
+
+  <!-- ─── Body layout ──────────────────────────────────────────────────── -->
+  <div style="max-width:1100px;margin:0 auto;padding:40px 16px;">
+    <div id="layout" style="display:flex;gap:32px;align-items:flex-start;">
+
+      <!-- TOC Sidebar -->
+      <aside id="toc-sidebar" style="width:240px;flex-shrink:0;position:sticky;top:88px;">
+        <div style="background:#fff;border-radius:16px;border:1px solid #e2e8f0;padding:20px;box-shadow:0 1px 4px rgba(0,0,0,.05);">
+          <div id="toc-title" style="font-weight:700;font-size:13px;color:#0f172a;margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid #f1f5f9;"></div>
+          <nav id="toc-nav" style="display:flex;flex-direction:column;gap:4px;"></nav>
+        </div>
+      </aside>
+
+      <!-- Content -->
+      <div style="flex:1;min-width:0;">
+
+        <!-- Info notice -->
+        <div id="notice-box" style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:12px;padding:16px 20px;margin-bottom:32px;display:flex;gap:14px;align-items:flex-start;">
+          <i class="fa-solid fa-circle-info" style="color:#2563eb;font-size:18px;margin-top:2px;flex-shrink:0;"></i>
+          <p id="notice-text" style="font-size:14px;color:#1d4ed8;line-height:1.65;"></p>
+        </div>
+
+        <!-- Sections injected here -->
+        <div id="sections-container"></div>
+
+        <!-- Contact section -->
+        <div id="contact-box" style="margin-top:40px;background:#fff;border-radius:16px;border:1px solid #e2e8f0;padding:28px 32px;box-shadow:0 1px 4px rgba(0,0,0,.05);">
+          <h3 id="contact-title" style="font-weight:700;font-size:17px;color:#0f172a;margin-bottom:16px;display:flex;align-items:center;gap:8px;">
+            <i class="fa-solid fa-envelope" style="color:#2563eb;"></i>
+            <span></span>
+          </h3>
+          <div style="display:flex;flex-direction:column;gap:10px;">
+            <div style="display:flex;align-items:center;gap:10px;font-size:14px;color:#475569;">
+              <i class="fa-solid fa-envelope" style="color:#2563eb;width:16px;text-align:center;"></i>
+              <a href="mailto:support@jongjongdi.com" style="color:#2563eb;">support@jongjongdi.com</a>
+            </div>
+            <div style="display:flex;align-items:center;gap:10px;font-size:14px;color:#475569;">
+              <i class="fa-solid fa-phone" style="color:#2563eb;width:16px;text-align:center;"></i>
+              <span>02-123-4567</span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  const lang = getLang();
+  const isTh = lang !== 'en';
+
+  // ── Header ──────────────────────────────────────────────────────────────
+  document.querySelector('#header-chip span').textContent = isTh ? 'เอกสารทางกฎหมาย' : 'Legal Document';
+  document.getElementById('header-title').textContent = isTh ? 'ข้อกำหนดและเงื่อนไข' : 'Terms & Conditions';
+  document.querySelector('#header-date span').textContent = isTh
+    ? 'อัปเดตล่าสุด: 1 มกราคม 2567'
+    : 'Last updated: January 1, 2024';
+
+  // ── Notice ──────────────────────────────────────────────────────────────
+  document.getElementById('notice-text').textContent = isTh
+    ? 'กรุณาอ่านข้อกำหนดและเงื่อนไขเหล่านี้อย่างละเอียดก่อนใช้งานแพลตฟอร์ม JongJongDi การใช้งานแพลตฟอร์มของเราถือว่าคุณยอมรับข้อกำหนดทั้งหมดที่ระบุไว้ในเอกสารนี้'
+    : 'Please read these Terms & Conditions carefully before using the JongJongDi platform. By using our platform, you agree to all terms set forth in this document.';
+
+  // ── Sections data ───────────────────────────────────────────────────────
+  const sections = isTh ? [
+    {
+      id: 'general',
+      title: '1. ข้อกำหนดทั่วไป',
+      bullets: [
+        'การใช้งานเว็บไซต์ JongJongDi.com และบริการที่เกี่ยวข้องถือว่าคุณยอมรับข้อกำหนดและเงื่อนไขทั้งหมดนี้',
+        'JongJongDi ขอสงวนสิทธิ์ในการแก้ไขข้อกำหนดได้ทุกเมื่อ โดยจะแจ้งให้ทราบผ่านเว็บไซต์',
+        'ผู้ใช้งานต้องมีอายุไม่ต่ำกว่า 18 ปี หรือได้รับความยินยอมจากผู้ปกครอง',
+      ],
+    },
+    {
+      id: 'booking',
+      title: '2. การจองและการชำระเงิน',
+      bullets: [
+        'การจองจะสมบูรณ์เมื่อได้รับการยืนยันจากระบบและมีการชำระเงินครบถ้วน',
+        'ราคาที่แสดงบนเว็บไซต์เป็นราคารวมภาษีมูลค่าเพิ่ม (VAT) แล้ว เว้นแต่จะระบุไว้เป็นอื่น',
+        'JongJongDi รองรับการชำระเงินผ่านการโอนธนาคาร บัตรเครดิต/เดบิต และ QR Code',
+        'ในกรณีที่การชำระเงินไม่สำเร็จ การจองจะถูกยกเลิกอัตโนมัติภายใน 30 นาที',
+      ],
+    },
+    {
+      id: 'cancellation',
+      title: '3. การยกเลิกและการคืนเงิน',
+      bullets: [
+        'นโยบายการยกเลิกขึ้นอยู่กับเงื่อนไขของที่พักหรือทัวร์แต่ละแห่ง โปรดตรวจสอบก่อนทำการจอง',
+        'การยกเลิกก่อน 7 วันของวันเดินทาง โดยทั่วไปจะได้รับเงินคืนเต็มจำนวน หักค่าธรรมเนียมดำเนินการ 5%',
+        'การยกเลิกภายใน 3–7 วันก่อนวันเดินทาง จะได้รับเงินคืน 50% ของยอดชำระ',
+        'การยกเลิกน้อยกว่า 3 วัน หรือไม่มาใช้บริการ (No Show) จะไม่ได้รับเงินคืน',
+        'JongJongDi จะดำเนินการคืนเงินภายใน 7–14 วันทำการหลังจากได้รับการอนุมัติ',
+      ],
+    },
+    {
+      id: 'userduty',
+      title: '4. หน้าที่ของผู้ใช้',
+      bullets: [
+        'ผู้ใช้งานต้องให้ข้อมูลที่ถูกต้องและเป็นความจริงในการสมัครสมาชิกและการจอง',
+        'ห้ามใช้บัญชีของผู้อื่นหรือสร้างบัญชีปลอมเพื่อรับสิทธิประโยชน์',
+        'ผู้ใช้งานต้องรักษาความปลอดภัยของรหัสผ่านและไม่เปิดเผยให้บุคคลอื่น',
+        'หากพบการใช้งานที่ผิดกฎหมายหรือผิดเงื่อนไข JongJongDi ขอสงวนสิทธิ์ระงับบัญชีทันที',
+      ],
+    },
+    {
+      id: 'privacy',
+      title: '5. ความเป็นส่วนตัว',
+      bullets: [
+        'JongJongDi จัดเก็บข้อมูลส่วนบุคคลเพื่อการให้บริการและปรับปรุงประสบการณ์การใช้งานเท่านั้น',
+        'ข้อมูลของคุณจะไม่ถูกเปิดเผยหรือขายให้แก่บุคคลที่สาม เว้นแต่จะได้รับความยินยอมหรือตามที่กฎหมายกำหนด',
+        'คุณมีสิทธิ์ขอดู แก้ไข หรือลบข้อมูลส่วนบุคคลของตนเองได้ตลอดเวลา',
+        'เราใช้การเข้ารหัสข้อมูล (SSL) และมาตรการรักษาความปลอดภัยมาตรฐานสากล',
+      ],
+    },
+    {
+      id: 'coupon',
+      title: '6. คูปองและโปรโมชัน',
+      bullets: [
+        'คูปองส่วนลดมีระยะเวลาใช้งานและเงื่อนไขเฉพาะตามที่ระบุในคูปองแต่ละใบ',
+        'ไม่สามารถใช้คูปองหลายใบพร้อมกัน เว้นแต่จะระบุไว้เป็นอื่น',
+        'JongJongDi ขอสงวนสิทธิ์ยกเลิกหรือแก้ไขเงื่อนไขคูปองได้โดยไม่ต้องแจ้งล่วงหน้า',
+        'คูปองที่ได้รับจากการชวนเพื่อน (Referral) มีเงื่อนไขพิเศษตามโปรแกรม',
+      ],
+    },
+    {
+      id: 'liability',
+      title: '7. การจำกัดความรับผิด',
+      bullets: [
+        'JongJongDi ทำหน้าที่เป็นตัวกลางในการจอง และไม่รับผิดชอบต่อคุณภาพบริการของผู้ให้บริการโดยตรง',
+        'ความเสียหายที่เกิดจากเหตุสุดวิสัย เช่น ภัยธรรมชาติ หรือเหตุการณ์ที่อยู่นอกเหนือการควบคุม จะได้รับการพิจารณาเป็นกรณีไป',
+        'ความรับผิดสูงสุดของ JongJongDi จะไม่เกินมูลค่าที่คุณชำระสำหรับการจองนั้น ๆ',
+        'JongJongDi ไม่รับผิดชอบต่อความเสียหายทางอ้อม ความเสียหายต่อธุรกิจ หรือการสูญเสียรายได้',
+      ],
+    },
+    {
+      id: 'law',
+      title: '8. กฎหมายที่ใช้บังคับ',
+      bullets: [
+        'ข้อกำหนดและเงื่อนไขนี้อยู่ภายใต้กฎหมายไทยและให้ตีความตามกฎหมายราชอาณาจักรไทย',
+        'ข้อพิพาทใด ๆ ที่เกิดขึ้นจากการใช้งานแพลตฟอร์มให้อยู่ในเขตอำนาจศาลในกรุงเทพมหานคร',
+        'หากข้อกำหนดใดไม่มีผลบังคับ ข้อกำหนดที่เหลือยังคงมีผลบังคับใช้ต่อไป',
+      ],
+    },
+  ] : [
+    {
+      id: 'general',
+      title: '1. General Terms',
+      bullets: [
+        'By using JongJongDi.com and related services, you agree to all these terms and conditions.',
+        'JongJongDi reserves the right to amend these terms at any time and will notify users through the website.',
+        'Users must be at least 18 years old or have parental consent to use this platform.',
+      ],
+    },
+    {
+      id: 'booking',
+      title: '2. Booking & Payment',
+      bullets: [
+        'A booking is complete when confirmed by the system and full payment has been received.',
+        'Prices shown on the website include VAT unless stated otherwise.',
+        'JongJongDi accepts payment via bank transfer, credit/debit card, and QR Code.',
+        'If payment fails, the booking will be automatically cancelled within 30 minutes.',
+      ],
+    },
+    {
+      id: 'cancellation',
+      title: '3. Cancellation & Refunds',
+      bullets: [
+        'Cancellation policies depend on the specific property or tour. Please review them before booking.',
+        'Cancellations made 7+ days before the travel date generally receive a full refund minus a 5% processing fee.',
+        'Cancellations made 3–7 days before the travel date receive a 50% refund.',
+        'Cancellations within 3 days or no-shows are non-refundable.',
+        'JongJongDi will process refunds within 7–14 business days after approval.',
+      ],
+    },
+    {
+      id: 'userduty',
+      title: '4. User Responsibilities',
+      bullets: [
+        'Users must provide accurate and truthful information during registration and booking.',
+        'Using another person\'s account or creating fake accounts to gain benefits is prohibited.',
+        'Users are responsible for keeping their password secure and must not share it with others.',
+        'If illegal or prohibited activity is detected, JongJongDi reserves the right to suspend the account immediately.',
+      ],
+    },
+    {
+      id: 'privacy',
+      title: '5. Privacy',
+      bullets: [
+        'JongJongDi collects personal data solely to provide services and improve the user experience.',
+        'Your data will not be disclosed or sold to third parties without consent or as required by law.',
+        'You have the right to view, correct, or delete your personal data at any time.',
+        'We use SSL encryption and industry-standard security measures to protect your data.',
+      ],
+    },
+    {
+      id: 'coupon',
+      title: '6. Coupons & Promotions',
+      bullets: [
+        'Discount coupons have specific expiry dates and conditions as stated on each coupon.',
+        'Multiple coupons cannot be used simultaneously unless otherwise specified.',
+        'JongJongDi reserves the right to cancel or modify coupon terms without prior notice.',
+        'Referral coupons are subject to special conditions under the referral program.',
+      ],
+    },
+    {
+      id: 'liability',
+      title: '7. Limitation of Liability',
+      bullets: [
+        'JongJongDi acts as an intermediary for bookings and is not directly responsible for the quality of service providers.',
+        'Damages caused by force majeure such as natural disasters or uncontrollable events will be considered on a case-by-case basis.',
+        'JongJongDi\'s maximum liability shall not exceed the amount you paid for the specific booking.',
+        'JongJongDi is not liable for indirect damages, business losses, or lost revenue.',
+      ],
+    },
+    {
+      id: 'law',
+      title: '8. Governing Law',
+      bullets: [
+        'These Terms & Conditions are governed by Thai law and shall be interpreted under the laws of the Kingdom of Thailand.',
+        'Any disputes arising from the use of the platform shall be subject to the jurisdiction of courts in Bangkok.',
+        'If any provision is found unenforceable, the remaining provisions shall continue to apply.',
+      ],
+    },
+  ];
+
+  // ── Render TOC ──────────────────────────────────────────────────────────
+  document.getElementById('toc-title').textContent = isTh ? 'สารบัญ' : 'Table of Contents';
+  document.getElementById('toc-nav').innerHTML = sections.map(s => `
+    <a href="#${s.id}"
+       style="display:block;padding:7px 10px;border-radius:8px;font-size:13px;color:#475569;font-weight:500;transition:.15s;"
+       onmouseover="this.style.background='#eff6ff';this.style.color='#2563eb'"
+       onmouseout="this.style.background='';this.style.color='#475569'"
+    >${s.title}</a>
+  `).join('');
+
+  // ── Render Sections ─────────────────────────────────────────────────────
+  document.getElementById('sections-container').innerHTML = sections.map(s => `
+    <section id="${s.id}" style="background:#fff;border-radius:16px;border:1px solid #e2e8f0;padding:28px 32px;margin-bottom:20px;box-shadow:0 1px 4px rgba(0,0,0,.05);">
+      <h2 style="font-size:18px;font-weight:700;color:#0f172a;padding-bottom:14px;margin-bottom:18px;border-bottom:2px solid #e2e8f0;">${s.title}</h2>
+      <ul style="list-style:none;display:flex;flex-direction:column;gap:12px;">
+        ${s.bullets.map(b => `
+          <li style="display:flex;gap:12px;align-items:flex-start;font-size:14px;color:#475569;line-height:1.7;">
+            <span style="width:8px;height:8px;border-radius:50%;background:#2563eb;flex-shrink:0;margin-top:7px;"></span>
+            <span>${b}</span>
+          </li>
+        `).join('')}
+      </ul>
+    </section>
+  `).join('');
+
+  // ── Contact ─────────────────────────────────────────────────────────────
+  document.querySelector('#contact-title span').textContent = isTh ? 'ติดต่อเรา' : 'Contact Us';
+
+  // ── Navbar + Footer ─────────────────────────────────────────────────────
+  initPage({ base: '' });
+});
+</script>
+
+</body>
+</html>

@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ตั้งค่าบัญชี – JongJongDi Admin</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+</head>
+<body>
+  <script src="_lib.js"></script>
+  <script>
+    var _shell = renderAdminShell({ activePage: 'settings.html' });
+
+    var content = document.getElementById('page-content');
+
+    content.insertAdjacentHTML('beforeend', [
+      '<div style="max-width:540px">',
+
+        // Page title
+        '<div style="margin-bottom:24px">',
+          '<h1 style="margin:0;font-size:22px;font-weight:700;color:#0f172a">ตั้งค่าบัญชี</h1>',
+          '<p style="margin:4px 0 0;font-size:14px;color:#64748b">จัดการข้อมูลบัญชีและความปลอดภัย</p>',
+        '</div>',
+
+        // Change password card
+        '<div style="background:#fff;border-radius:16px;box-shadow:0 1px 4px rgba(0,0,0,0.08);padding:28px 28px 32px">',
+
+          '<div style="display:flex;align-items:center;gap:10px;margin-bottom:22px">',
+            '<div style="width:38px;height:38px;background:#eff6ff;border-radius:10px;',
+              'display:flex;align-items:center;justify-content:center">',
+              '<i class="fa-solid fa-lock" style="color:#2563eb;font-size:17px"></i>',
+            '</div>',
+            '<div>',
+              '<h2 style="margin:0;font-size:17px;font-weight:700;color:#0f172a">เปลี่ยนรหัสผ่าน</h2>',
+              '<p style="margin:0;font-size:12px;color:#94a3b8">อัปเดตรหัสผ่านเพื่อความปลอดภัย</p>',
+            '</div>',
+          '</div>',
+
+          // Error box
+          '<div id="pwd-error" style="display:none;background:#fee2e2;border:1px solid #fca5a5;',
+            'color:#dc2626;border-radius:10px;padding:10px 14px;font-size:13px;',
+            'margin-bottom:16px;display:flex;align-items:flex-start;gap:8px">',
+            '<i class="fa-solid fa-circle-exclamation" style="margin-top:1px;flex-shrink:0"></i>',
+            '<span id="pwd-error-msg"></span>',
+          '</div>',
+
+          // Success box
+          '<div id="pwd-success" style="display:none;background:#dcfce7;border:1px solid #86efac;',
+            'color:#15803d;border-radius:10px;padding:10px 14px;font-size:13px;',
+            'margin-bottom:16px;display:flex;align-items:center;gap:8px">',
+            '<i class="fa-solid fa-circle-check" style="flex-shrink:0"></i>',
+            '<span>เปลี่ยนรหัสผ่านสำเร็จ</span>',
+          '</div>',
+
+          '<form id="pwd-form" novalidate>',
+
+            // Current password
+            '<div style="margin-bottom:16px">',
+              '<label style="display:block;font-size:13px;font-weight:600;color:#374151;margin-bottom:5px">',
+                'รหัสผ่านปัจจุบัน',
+              '</label>',
+              '<div style="position:relative">',
+                '<input type="password" id="currentPassword" placeholder="รหัสผ่านปัจจุบัน"',
+                  ' style="width:100%;padding:10px 44px 10px 14px;border:1.5px solid #e2e8f0;',
+                  'border-radius:10px;font-family:Prompt,sans-serif;font-size:14px;color:#0f172a;',
+                  'outline:none;background:#f8fafc;transition:border-color .2s;box-sizing:border-box"',
+                  ' onfocus="this.style.borderColor=\'#2563eb\';this.style.background=\'#fff\'"',
+                  ' onblur="this.style.borderColor=\'#e2e8f0\';this.style.background=\'#f8fafc\'" />',
+                '<button type="button" onclick="_togglePwd(\'currentPassword\',\'icon-cur\')"',
+                  ' style="position:absolute;right:12px;top:50%;transform:translateY(-50%);',
+                  'background:none;border:none;cursor:pointer;color:#94a3b8;font-size:15px;padding:0"',
+                  ' onmouseover="this.style.color=\'#2563eb\'" onmouseout="this.style.color=\'#94a3b8\'">',
+                  '<i id="icon-cur" class="fa-solid fa-eye"></i>',
+                '</button>',
+              '</div>',
+            '</div>',
+
+            // New password
+            '<div style="margin-bottom:16px">',
+              '<label style="display:block;font-size:13px;font-weight:600;color:#374151;margin-bottom:5px">',
+                'รหัสผ่านใหม่ <span style="font-weight:400;color:#94a3b8">(อย่างน้อย 6 ตัวอักษร)</span>',
+              '</label>',
+              '<div style="position:relative">',
+                '<input type="password" id="newPassword" placeholder="รหัสผ่านใหม่" minlength="6"',
+                  ' style="width:100%;padding:10px 44px 10px 14px;border:1.5px solid #e2e8f0;',
+                  'border-radius:10px;font-family:Prompt,sans-serif;font-size:14px;color:#0f172a;',
+                  'outline:none;background:#f8fafc;transition:border-color .2s;box-sizing:border-box"',
+                  ' onfocus="this.style.borderColor=\'#2563eb\';this.style.background=\'#fff\'"',
+                  ' onblur="this.style.borderColor=\'#e2e8f0\';this.style.background=\'#f8fafc\'" />',
+                '<button type="button" onclick="_togglePwd(\'newPassword\',\'icon-new\')"',
+                  ' style="position:absolute;right:12px;top:50%;transform:translateY(-50%);',
+                  'background:none;border:none;cursor:pointer;color:#94a3b8;font-size:15px;padding:0"',
+                  ' onmouseover="this.style.color=\'#2563eb\'" onmouseout="this.style.color=\'#94a3b8\'">',
+                  '<i id="icon-new" class="fa-solid fa-eye"></i>',
+                '</button>',
+              '</div>',
+            '</div>',
+
+            // Confirm new password
+            '<div style="margin-bottom:24px">',
+              '<label style="display:block;font-size:13px;font-weight:600;color:#374151;margin-bottom:5px">',
+                'ยืนยันรหัสผ่านใหม่',
+              '</label>',
+              '<div style="position:relative">',
+                '<input type="password" id="confirmNewPassword" placeholder="พิมพ์รหัสผ่านใหม่อีกครั้ง"',
+                  ' style="width:100%;padding:10px 44px 10px 14px;border:1.5px solid #e2e8f0;',
+                  'border-radius:10px;font-family:Prompt,sans-serif;font-size:14px;color:#0f172a;',
+                  'outline:none;background:#f8fafc;transition:border-color .2s;box-sizing:border-box"',
+                  ' onfocus="this.style.borderColor=\'#2563eb\';this.style.background=\'#fff\'"',
+                  ' onblur="this.style.borderColor=\'#e2e8f0\';this.style.background=\'#f8fafc\'" />',
+                '<button type="button" onclick="_togglePwd(\'confirmNewPassword\',\'icon-con\')"',
+                  ' style="position:absolute;right:12px;top:50%;transform:translateY(-50%);',
+                  'background:none;border:none;cursor:pointer;color:#94a3b8;font-size:15px;padding:0"',
+                  ' onmouseover="this.style.color=\'#2563eb\'" onmouseout="this.style.color=\'#94a3b8\'">',
+                  '<i id="icon-con" class="fa-solid fa-eye"></i>',
+                '</button>',
+              '</div>',
+            '</div>',
+
+            // Submit
+            '<button type="submit" id="pwd-submit"',
+              ' style="padding:11px 28px;background:#2563eb;color:#fff;border:none;',
+              'border-radius:10px;font-family:Prompt,sans-serif;font-size:14px;font-weight:600;',
+              'cursor:pointer;display:flex;align-items:center;gap:8px;transition:background .2s,opacity .2s"',
+              ' onmouseover="if(!this.disabled)this.style.background=\'#1d4ed8\'"',
+              ' onmouseout="if(!this.disabled)this.style.background=\'#2563eb\'">',
+              '<div id="pwd-spinner" style="display:none;width:15px;height:15px;border:2px solid rgba(255,255,255,0.4);',
+                'border-top-color:#fff;border-radius:50%;animation:spin .6s linear infinite"></div>',
+              '<span id="pwd-btn-text">บันทึก</span>',
+            '</button>',
+
+          '</form>',
+        '</div>',
+      '</div>',
+
+      '<style>@keyframes spin{to{transform:rotate(360deg)}}</style>'
+    ].join(''));
+
+    function _togglePwd(inputId, iconId) {
+      var input = document.getElementById(inputId);
+      var icon = document.getElementById(iconId);
+      var show = input.type === 'password';
+      input.type = show ? 'text' : 'password';
+      icon.className = show ? 'fa-solid fa-eye-slash' : 'fa-solid fa-eye';
+    }
+
+    document.getElementById('pwd-form').addEventListener('submit', async function (e) {
+      e.preventDefault();
+
+      var currentPassword = document.getElementById('currentPassword').value;
+      var newPassword = document.getElementById('newPassword').value;
+      var confirmNewPassword = document.getElementById('confirmNewPassword').value;
+
+      var errorBox = document.getElementById('pwd-error');
+      var errorMsg = document.getElementById('pwd-error-msg');
+      var successBox = document.getElementById('pwd-success');
+      var spinner = document.getElementById('pwd-spinner');
+      var btnText = document.getElementById('pwd-btn-text');
+      var submitBtn = document.getElementById('pwd-submit');
+
+      function showError(msg) {
+        errorMsg.textContent = msg;
+        errorBox.style.display = 'flex';
+        successBox.style.display = 'none';
+      }
+
+      errorBox.style.display = 'none';
+      successBox.style.display = 'none';
+
+      if (!currentPassword || !newPassword || !confirmNewPassword) {
+        showError('กรุณากรอกข้อมูลให้ครบทุกช่อง');
+        return;
+      }
+      if (newPassword.length < 6) {
+        showError('รหัสผ่านใหม่ต้องมีอย่างน้อย 6 ตัวอักษร');
+        return;
+      }
+      if (newPassword !== confirmNewPassword) {
+        showError('รหัสผ่านใหม่และการยืนยันไม่ตรงกัน');
+        return;
+      }
+
+      spinner.style.display = 'block';
+      btnText.textContent = 'กำลังบันทึก...';
+      submitBtn.disabled = true;
+      submitBtn.style.opacity = '0.65';
+
+      try {
+        await adminPost('/api/auth/change-password', {
+          currentPassword: currentPassword,
+          newPassword: newPassword
+        });
+        successBox.style.display = 'flex';
+        document.getElementById('pwd-form').reset();
+        showToast('เปลี่ยนรหัสผ่านสำเร็จ', 'success');
+      } catch (err) {
+        showError(err.message || 'เกิดข้อผิดพลาด กรุณาลองใหม่');
+      } finally {
+        spinner.style.display = 'none';
+        btnText.textContent = 'บันทึก';
+        submitBtn.disabled = false;
+        submitBtn.style.opacity = '1';
+      }
+    });
+  </script>
+</body>
+</html>

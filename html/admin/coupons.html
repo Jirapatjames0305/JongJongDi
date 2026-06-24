@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>จัดการคูปอง – JongJongDi Admin</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Prompt', sans-serif; background: #f8fafc; color: #1e293b; }
+  </style>
+  <script src="_lib.js"></script>
+</head>
+<body>
+<script>
+(async function () {
+  renderAdminShell({ activePage: 'coupons.html', requireSuperAdmin: true });
+  const content = document.getElementById('page-content');
+
+  let coupons = [];
+
+  // ── Modal state ──────────────────────────────────────────────
+  let editingId = null;
+
+  // ── Render helpers ───────────────────────────────────────────
+  function isExpired(expiresAt) {
+    if (!expiresAt) return false;
+    return new Date(expiresAt) < new Date();
+  }
+
+  function renderRows(list) {
+    if (!list.length) {
+      return `<tr><td colspan="7" style="text-align:center;padding:48px 16px;color:#94a3b8;font-size:14px;">
+        <i class="fa-solid fa-ticket" style="font-size:28px;display:block;margin-bottom:8px;color:#cbd5e1;"></i>ยังไม่มีคูปอง
+      </td></tr>`;
+    }
+    return list.map(c => {
+      const expired = isExpired(c.expiresAt);
+      const activeLabel = c.isActive && !expired ? 'ใช้งาน' : 'ปิดการใช้';
+      const activeBg = c.isActive && !expired ? '#dcfce7' : '#fee2e2';
+      const activeColor = c.isActive && !expired ? '#15803d' : '#dc2626';
+
+      const discountHtml = c.discountType === 'PERCENT'
+        ? `<span style="background:#dbeafe;color:#1d4ed8;padding:3px 10px;border-radius:999px;font-size:13px;font-weight:600;">${fmt(c.discountValue)}%</span>`
+        : `<span style="background:#dcfce7;color:#15803d;padding:3px 10px;border-radius:999px;font-size:13px;font-weight:600;">฿${fmt(c.discountValue)}</span>`;
+
+      const limit = c.usageLimit || 0;
+      const used = c.usageCount || 0;
+      const pct = limit > 0 ? Math.min(100, Math.round(used / limit * 100)) : 0;
+      const usageHtml = limit > 0
+        ? `<div style="font-size:13px;color:#1e293b;margin-bottom:4px;">${fmt(used)} / ${fmt(limit)}</div>
+           <div style="height:4px;background:#e2e8f0;border-radius:99px;overflow:hidden;">
+             <div style="height:100%;width:${pct}%;background:${pct >= 90 ? '#dc2626' : '#2563eb'};border-radius:99px;"></div>
+           </div>`
+        : `<span style="font-size:13px;color:#94a3b8;">${fmt(used)} / ∞</span>`;
+
+      const expireHtml = c.expiresAt
+        ? `<span style="font-size:13px;color:${expired ? '#dc2626' : '#475569'};">${fmtDate(c.expiresAt)}${expired ? ' <i class="fa-solid fa-circle-exclamation" style="font-size:11px;"></i>' : ''}</span>`
+        : `<span style="font-size:13px;color:#94a3b8;">ไม่กำหนด</span>`;
+
+      return `<tr style="border-bottom:1px solid #f1f5f9;" id="coupon-row-${c.id}">
+        <td style="padding:14px 16px;min-width:180px;">
+          <div style="font-family:monospace;font-weight:700;font-size:14px;color:#1e293b;">${c.code}</div>
+          ${c.description ? `<div style="font-size:12px;color:#64748b;margin-top:2px;">${c.description}</div>` : ''}
+        </td>
+        <td style="padding:14px 16px;">${discountHtml}</td>
+        <td style="padding:14px 16px;font-size:13px;color:#475569;">${c.minAmount ? '฿' + fmt(c.minAmount) : '—'}</td>
+        <td style="padding:14px 16px;min-width:130px;">${usageHtml}</td>
+        <td style="padding:14px 16px;">${expireHtml}</td>
+        <td style="padding:14px 16px;">
+          <span style="background:${activeBg};color:${activeColor};padding:3px 10px;border-radius:999px;font-size:12px;font-weight:600;">${activeLabel}</span>
+        </td>
+        <td style="padding:14px 16px;white-space:nowrap;">
+          <button onclick="openModal(${c.id})" style="background:#eff6ff;color:#2563eb;border:none;padding:6px 12px;border-radius:7px;font-size:13px;font-family:Prompt,sans-serif;cursor:pointer;margin-right:6px;">
+            <i class="fa-solid fa-pen"></i>
+          </button>
+          <button onclick="toggleActive(${c.id},${c.isActive})" title="${c.isActive ? 'ปิดใช้งาน' : 'เปิดใช้งาน'}"
+            style="background:${c.isActive ? '#fef9c3' : '#f0fdf4'};color:${c.isActive ? '#a16207' : '#15803d'};border:none;padding:6px 12px;border-radius:7px;font-size:13px;font-family:Prompt,sans-serif;cursor:pointer;margin-right:6px;">
+            <i class="fa-solid ${c.isActive ? 'fa-eye-slash' : 'fa-eye'}"></i>
+          </button>
+          <button onclick="deleteCoupon(${c.id})" style="background:#fee2e2;color:#dc2626;border:none;padding:6px 12px;border-radius:7px;font-size:13px;font-family:Prompt,sans-serif;cursor:pointer;">
+            <i class="fa-solid fa-trash"></i>
+          </button>
+        </td>
+      </tr>`;
+    }).join('');
+  }
+
+  function applyFilter() {
+    const q = (document.getElementById('search-input')?.value || '').toLowerCase();
+    const filtered = q
+      ? coupons.filter(c =>
+          c.code.toLowerCase().includes(q) ||
+          (c.description || '').toLowerCase().includes(q))
+      : coupons;
+    const tbody = document.getElementById('coupons-tbody');
+    if (tbody) tbody.innerHTML = renderRows(filtered);
+    const cnt = document.getElementById('coupon-count');
+    if (cnt) cnt.textContent = coupons.length + ' คูปองทั้งหมด';
+  }
+
+  function buildPage() {
+    content.innerHTML = `
+      <!-- Header -->
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:24px;">
+        <div style="display:flex;align-items:center;gap:12px;">
+          <div style="width:44px;height:44px;background:#eff6ff;border-radius:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+            <i class="fa-solid fa-ticket" style="color:#2563eb;font-size:20px;"></i>
+          </div>
+          <div>
+            <h1 style="font-size:20px;font-weight:700;color:#1e293b;line-height:1.2;">จัดการคูปอง</h1>
+            <div id="coupon-count" style="font-size:13px;color:#64748b;"></div>
+          </div>
+        </div>
+        <button onclick="openModal(null)" style="background:#2563eb;color:#fff;border:none;padding:10px 20px;border-radius:10px;font-size:14px;font-weight:600;font-family:Prompt,sans-serif;cursor:pointer;display:flex;align-items:center;gap:8px;">
+          <i class="fa-solid fa-plus"></i> สร้างคูปองใหม่
+        </button>
+      </div>
+
+      <!-- Search -->
+      <div style="background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:14px 16px;margin-bottom:20px;display:flex;align-items:center;gap:10px;">
+        <i class="fa-solid fa-magnifying-glass" style="color:#94a3b8;"></i>
+        <input id="search-input" type="text" placeholder="ค้นหารหัสหรือคำอธิบาย…"
+          style="border:none;outline:none;font-family:Prompt,sans-serif;font-size:14px;color:#1e293b;width:100%;background:transparent;"
+          oninput="applyFilter()">
+      </div>
+
+      <!-- Table -->
+      <div style="background:#fff;border:1px solid #e2e8f0;border-radius:16px;box-shadow:0 1px 3px rgba(0,0,0,.06);overflow:hidden;">
+        <div style="overflow-x:auto;">
+          <table style="width:100%;border-collapse:collapse;min-width:700px;">
+            <thead>
+              <tr style="background:#f8fafc;border-bottom:1px solid #e2e8f0;">
+                <th style="padding:12px 16px;text-align:left;font-size:12px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:.04em;">รหัส / คำอธิบาย</th>
+                <th style="padding:12px 16px;text-align:left;font-size:12px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:.04em;">ส่วนลด</th>
+                <th style="padding:12px 16px;text-align:left;font-size:12px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:.04em;">ขั้นต่ำ</th>
+                <th style="padding:12px 16px;text-align:left;font-size:12px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:.04em;">การใช้งาน</th>
+                <th style="padding:12px 16px;text-align:left;font-size:12px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:.04em;">หมดอายุ</th>
+                <th style="padding:12px 16px;text-align:left;font-size:12px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:.04em;">สถานะ</th>
+                <th style="padding:12px 16px;text-align:left;font-size:12px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:.04em;">จัดการ</th>
+              </tr>
+            </thead>
+            <tbody id="coupons-tbody">
+              <tr><td colspan="7" style="text-align:center;padding:48px;color:#94a3b8;">
+                <i class="fa-solid fa-circle-notch fa-spin" style="font-size:22px;color:#2563eb;"></i>
+              </td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Modal -->
+      <div id="coupon-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:500;align-items:center;justify-content:center;padding:20px;">
+        <div style="background:#fff;border-radius:20px;width:100%;max-width:520px;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.2);">
+          <div style="padding:24px;border-bottom:1px solid #e2e8f0;display:flex;align-items:center;justify-content:space-between;">
+            <h2 id="modal-title" style="font-size:17px;font-weight:700;color:#1e293b;"></h2>
+            <button onclick="closeModal()" style="background:none;border:none;font-size:20px;color:#94a3b8;cursor:pointer;line-height:1;">✕</button>
+          </div>
+          <form id="coupon-form" onsubmit="submitForm(event)" style="padding:24px;display:flex;flex-direction:column;gap:18px;">
+            <div>
+              <label style="font-size:13px;font-weight:600;color:#374151;display:block;margin-bottom:6px;">รหัสคูปอง <span style="color:#dc2626;">*</span></label>
+              <input id="f-code" type="text" required placeholder="เช่น SUMMER20"
+                oninput="this.value=this.value.toUpperCase()"
+                style="width:100%;padding:10px 14px;border:1px solid #d1d5db;border-radius:9px;font-family:Prompt,sans-serif;font-size:14px;font-family:monospace;outline:none;">
+            </div>
+            <div>
+              <label style="font-size:13px;font-weight:600;color:#374151;display:block;margin-bottom:6px;">คำอธิบาย</label>
+              <input id="f-description" type="text" placeholder="ระบุรายละเอียด (ถ้ามี)"
+                style="width:100%;padding:10px 14px;border:1px solid #d1d5db;border-radius:9px;font-family:Prompt,sans-serif;font-size:14px;outline:none;">
+            </div>
+            <div>
+              <label style="font-size:13px;font-weight:600;color:#374151;display:block;margin-bottom:8px;">ประเภทส่วนลด <span style="color:#dc2626;">*</span></label>
+              <div style="display:flex;gap:8px;">
+                <button type="button" id="btn-percent" onclick="setType('PERCENT')"
+                  style="flex:1;padding:9px;border-radius:9px;border:2px solid #2563eb;background:#eff6ff;color:#2563eb;font-family:Prompt,sans-serif;font-size:14px;font-weight:600;cursor:pointer;">
+                  <i class="fa-solid fa-percent"></i> เปอร์เซ็นต์
+                </button>
+                <button type="button" id="btn-fixed" onclick="setType('FIXED')"
+                  style="flex:1;padding:9px;border-radius:9px;border:2px solid #e2e8f0;background:#fff;color:#64748b;font-family:Prompt,sans-serif;font-size:14px;font-weight:600;cursor:pointer;">
+                  <i class="fa-solid fa-baht-sign"></i> จำนวนเงิน
+                </button>
+              </div>
+              <input type="hidden" id="f-discount-type" value="PERCENT">
+            </div>
+            <div>
+              <label style="font-size:13px;font-weight:600;color:#374151;display:block;margin-bottom:6px;">มูลค่าส่วนลด <span style="color:#dc2626;">*</span></label>
+              <input id="f-discount-value" type="number" min="0" step="0.01" required placeholder="เช่น 20"
+                style="width:100%;padding:10px 14px;border:1px solid #d1d5db;border-radius:9px;font-family:Prompt,sans-serif;font-size:14px;outline:none;">
+            </div>
+            <div>
+              <label style="font-size:13px;font-weight:600;color:#374151;display:block;margin-bottom:6px;">ขั้นต่ำซื้อ (บาท)</label>
+              <input id="f-min-amount" type="number" min="0" step="0.01" placeholder="ไม่กำหนด"
+                style="width:100%;padding:10px 14px;border:1px solid #d1d5db;border-radius:9px;font-family:Prompt,sans-serif;font-size:14px;outline:none;">
+            </div>
+            <div id="max-discount-row">
+              <label style="font-size:13px;font-weight:600;color:#374151;display:block;margin-bottom:6px;">ส่วนลดสูงสุด (บาท)</label>
+              <input id="f-max-discount" type="number" min="0" step="0.01" placeholder="ไม่กำหนด"
+                style="width:100%;padding:10px 14px;border:1px solid #d1d5db;border-radius:9px;font-family:Prompt,sans-serif;font-size:14px;outline:none;">
+            </div>
+            <div>
+              <label style="font-size:13px;font-weight:600;color:#374151;display:block;margin-bottom:6px;">วันหมดอายุ</label>
+              <input id="f-expires-at" type="date"
+                style="width:100%;padding:10px 14px;border:1px solid #d1d5db;border-radius:9px;font-family:Prompt,sans-serif;font-size:14px;outline:none;">
+            </div>
+            <div>
+              <label style="font-size:13px;font-weight:600;color:#374151;display:block;margin-bottom:6px;">จำกัดการใช้งาน (ครั้ง)</label>
+              <input id="f-usage-limit" type="number" min="0" step="1" placeholder="ไม่จำกัด"
+                style="width:100%;padding:10px 14px;border:1px solid #d1d5db;border-radius:9px;font-family:Prompt,sans-serif;font-size:14px;outline:none;">
+            </div>
+            <div style="display:flex;gap:10px;padding-top:4px;">
+              <button type="button" onclick="closeModal()" style="flex:1;padding:11px;border-radius:10px;border:1px solid #e2e8f0;background:#f8fafc;font-family:Prompt,sans-serif;font-size:14px;font-weight:600;color:#475569;cursor:pointer;">ยกเลิก</button>
+              <button type="submit" style="flex:2;padding:11px;border-radius:10px;border:none;background:#2563eb;color:#fff;font-family:Prompt,sans-serif;font-size:14px;font-weight:600;cursor:pointer;">
+                <i class="fa-solid fa-floppy-disk"></i> บันทึก
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    `;
+    applyFilter();
+  }
+
+  // ── Global functions ─────────────────────────────────────────
+  window.applyFilter = applyFilter;
+
+  window.openModal = function (id) {
+    editingId = id;
+    const modal = document.getElementById('coupon-modal');
+    const title = document.getElementById('modal-title');
+    title.textContent = id ? 'แก้ไขคูปอง' : 'สร้างคูปองใหม่';
+
+    // Reset
+    document.getElementById('coupon-form').reset();
+    document.getElementById('f-discount-type').value = 'PERCENT';
+    setType('PERCENT');
+
+    if (id) {
+      const c = coupons.find(x => x.id === id);
+      if (!c) return;
+      document.getElementById('f-code').value = c.code;
+      document.getElementById('f-description').value = c.description || '';
+      document.getElementById('f-discount-value').value = c.discountValue;
+      document.getElementById('f-min-amount').value = c.minAmount || '';
+      document.getElementById('f-max-discount').value = c.maxDiscount || '';
+      document.getElementById('f-expires-at').value = c.expiresAt ? c.expiresAt.slice(0, 10) : '';
+      document.getElementById('f-usage-limit').value = c.usageLimit || '';
+      document.getElementById('f-discount-type').value = c.discountType;
+      setType(c.discountType);
+      // Code is read-only when editing
+      document.getElementById('f-code').readOnly = true;
+      document.getElementById('f-code').style.background = '#f8fafc';
+    } else {
+      document.getElementById('f-code').readOnly = false;
+      document.getElementById('f-code').style.background = '';
+    }
+
+    modal.style.display = 'flex';
+  };
+
+  window.closeModal = function () {
+    document.getElementById('coupon-modal').style.display = 'none';
+    editingId = null;
+  };
+
+  window.setType = function (type) {
+    document.getElementById('f-discount-type').value = type;
+    const btnP = document.getElementById('btn-percent');
+    const btnF = document.getElementById('btn-fixed');
+    const maxRow = document.getElementById('max-discount-row');
+    if (type === 'PERCENT') {
+      btnP.style.border = '2px solid #2563eb'; btnP.style.background = '#eff6ff'; btnP.style.color = '#2563eb';
+      btnF.style.border = '2px solid #e2e8f0'; btnF.style.background = '#fff'; btnF.style.color = '#64748b';
+      maxRow.style.display = '';
+    } else {
+      btnF.style.border = '2px solid #2563eb'; btnF.style.background = '#eff6ff'; btnF.style.color = '#2563eb';
+      btnP.style.border = '2px solid #e2e8f0'; btnP.style.background = '#fff'; btnP.style.color = '#64748b';
+      maxRow.style.display = 'none';
+    }
+  };
+
+  window.submitForm = async function (e) {
+    e.preventDefault();
+    const btn = e.target.querySelector('[type=submit]');
+    btn.disabled = true;
+    const code = document.getElementById('f-code').value.trim();
+    const description = document.getElementById('f-description').value.trim();
+    const discountType = document.getElementById('f-discount-type').value;
+    const discountValue = parseFloat(document.getElementById('f-discount-value').value);
+    const minAmount = document.getElementById('f-min-amount').value ? parseFloat(document.getElementById('f-min-amount').value) : undefined;
+    const maxDiscount = document.getElementById('f-max-discount').value ? parseFloat(document.getElementById('f-max-discount').value) : undefined;
+    const expiresAt = document.getElementById('f-expires-at').value || undefined;
+    const usageLimit = document.getElementById('f-usage-limit').value ? parseInt(document.getElementById('f-usage-limit').value) : undefined;
+    try {
+      const body = { code, discountType, discountValue };
+      if (description) body.description = description;
+      if (minAmount !== undefined) body.minAmount = minAmount;
+      if (maxDiscount !== undefined) body.maxDiscount = maxDiscount;
+      if (expiresAt) body.expiresAt = expiresAt;
+      if (usageLimit !== undefined) body.usageLimit = usageLimit;
+
+      if (editingId) {
+        await adminPatch('/api/coupons/' + editingId, body);
+        showToast('แก้ไขคูปองสำเร็จ');
+      } else {
+        await adminPost('/api/coupons', body);
+        showToast('สร้างคูปองสำเร็จ');
+      }
+      closeModal();
+      await loadCoupons();
+    } catch (err) {
+      showToast(err.message || 'เกิดข้อผิดพลาด', 'error');
+    } finally {
+      btn.disabled = false;
+    }
+  };
+
+  window.toggleActive = async function (id, current) {
+    try {
+      await adminPatch('/api/coupons/' + id, { isActive: !current });
+      showToast(!current ? 'เปิดใช้งานคูปองแล้ว' : 'ปิดใช้งานคูปองแล้ว');
+      await loadCoupons();
+    } catch (err) {
+      showToast(err.message || 'เกิดข้อผิดพลาด', 'error');
+    }
+  };
+
+  window.deleteCoupon = async function (id) {
+    const c = coupons.find(x => x.id === id);
+    if (!confirm(`ลบคูปอง "${c?.code}" ใช่หรือไม่?`)) return;
+    try {
+      await adminDelete('/api/coupons/' + id);
+      showToast('ลบคูปองสำเร็จ');
+      await loadCoupons();
+    } catch (err) {
+      showToast(err.message || 'เกิดข้อผิดพลาด', 'error');
+    }
+  };
+
+  async function loadCoupons() {
+    try {
+      coupons = await adminGet('/api/coupons');
+    } catch (e) {
+      coupons = [];
+    }
+    applyFilter();
+  }
+
+  // ── Init ─────────────────────────────────────────────────────
+  buildPage();
+  await loadCoupons();
+})();
+</script>
+</body>
+</html>

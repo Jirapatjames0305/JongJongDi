@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ทัวร์ – JongJongDi Admin</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script src="_lib.js"></script>
+  <style>
+    * { box-sizing: border-box; }
+    body { font-family: Prompt, sans-serif; }
+    input, textarea, select, button { font-family: Prompt, sans-serif; }
+    .btn { cursor: pointer; border: none; border-radius: 8px; font-size: 13px; font-weight: 600; padding: 7px 14px; transition: opacity .15s; }
+    .btn:hover { opacity: .85; }
+    .btn-blue { background: #2563eb; color: #fff; }
+    .btn-blue-outline { background: #fff; color: #2563eb; border: 1px solid #2563eb; }
+    .btn-gray { background: #f1f5f9; color: #475569; border: 1px solid #e2e8f0; }
+    .btn-red { background: #fee2e2; color: #dc2626; border: 1px solid #fca5a5; }
+    .btn-cyan { background: #ecfeff; color: #0891b2; border: 1px solid #a5f3fc; }
+    .form-label { display: block; font-size: 13px; font-weight: 600; color: #374151; margin-bottom: 4px; }
+    .form-input { width: 100%; border: 1px solid #d1d5db; border-radius: 8px; padding: 8px 12px; font-size: 14px; color: #1e293b; outline: none; transition: border-color .15s; font-family: Prompt, sans-serif; }
+    .form-input:focus { border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37,99,235,.1); }
+    .modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,.5); z-index: 50; display: flex; align-items: center; justify-content: center; padding: 16px; }
+    .modal-box { background: #fff; border-radius: 16px; box-shadow: 0 20px 60px rgba(0,0,0,.25); width: 100%; max-width: 600px; max-height: 90vh; overflow-y: auto; }
+    .modal-header { display: flex; align-items: center; justify-content: space-between; padding: 20px 24px 16px; border-bottom: 1px solid #f1f5f9; position: sticky; top: 0; background: #fff; z-index: 1; border-radius: 16px 16px 0 0; }
+    .modal-body { padding: 24px; }
+    .modal-footer { padding: 16px 24px; border-top: 1px solid #f1f5f9; display: flex; justify-content: flex-end; gap: 10px; }
+  </style>
+</head>
+<body>
+<script>
+// ──────────────────────────────────────────────────────────────
+// State
+// ──────────────────────────────────────────────────────────────
+var _tours = [];
+var _editingTour = null;
+var _scheduleTour = null;  // tour for schedule modal
+var _schedules = [];
+var _imgTour = null;
+var _imgImages = [];
+
+// ──────────────────────────────────────────────────────────────
+// Boot
+// ──────────────────────────────────────────────────────────────
+(function () {
+  var shell = renderAdminShell({ activePage: 'tours.html' });
+  if (!shell) return;
+  loadTours();
+})();
+
+// ──────────────────────────────────────────────────────────────
+// Data
+// ──────────────────────────────────────────────────────────────
+async function loadTours() {
+  var pc = document.getElementById('page-content');
+  pc.insertAdjacentHTML('beforeend', '<div id="tours-loading" style="text-align:center;padding:40px;color:#94a3b8"><i class="fa-solid fa-circle-notch fa-spin" style="font-size:24px"></i></div>');
+  try {
+    _tours = await adminGet('/api/tours/admin/list');
+  } catch (e) {
+    _tours = [];
+    showToast('โหลดข้อมูลไม่ได้: ' + e.message, 'error');
+  }
+  document.getElementById('tours-loading')?.remove();
+  renderPage();
+}
+
+// ──────────────────────────────────────────────────────────────
+// Render
+// ──────────────────────────────────────────────────────────────
+function renderPage() {
+  var pc = document.getElementById('page-content');
+  var existing = document.getElementById('tours-root');
+  if (existing) existing.remove();
+
+  var total = _tours.length;
+  var activeCount = _tours.filter(function (t) { return t.isActive; }).length;
+
+  var html = '<div id="tours-root">';
+
+  // Header
+  html += '<div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:24px">' +
+    '<div>' +
+      '<h1 style="margin:0 0 4px;font-size:22px;font-weight:700;color:#0f172a">ทัวร์</h1>' +
+      '<p style="margin:0;font-size:13px;color:#64748b">' + total + ' ทัวร์ · เปิดรับจอง ' + activeCount + '</p>' +
+    '</div>' +
+    '<button class="btn btn-blue" onclick="openTourForm(null)">' +
+      '<i class="fa-solid fa-plus" style="margin-right:6px"></i>เพิ่มทัวร์' +
+    '</button>' +
+  '</div>';
+
+  if (_tours.length === 0) {
+    html += '<div style="text-align:center;padding:60px 20px;background:#fff;border-radius:16px;border:1px solid #f1f5f9">' +
+      '<i class="fa-solid fa-water-ladder" style="font-size:48px;color:#a5f3fc;margin-bottom:16px;display:block"></i>' +
+      '<p style="color:#94a3b8;font-size:15px;margin:0 0 16px">ยังไม่มีทัวร์</p>' +
+      '<button class="btn btn-blue" onclick="openTourForm(null)">เพิ่มทัวร์แรก</button>' +
+    '</div>';
+  } else {
+    html += '<div style="background:#fff;border-radius:16px;border:1px solid #f1f5f9;overflow:hidden">';
+    _tours.forEach(function (tour, idx) {
+      var schedCount = (tour._count && tour._count.schedules) || 0;
+      var imgCount = (tour.images || []).length;
+      var mainImg = (tour.images || []).find(function (i) { return i.isMain; }) || (tour.images || [])[0];
+      var imgUrl = mainImg ? mainImg.url : '';
+      var borderTop = idx > 0 ? 'border-top:1px solid #f1f5f9;' : '';
+
+      html += '<div style="' + borderTop + 'padding:16px 20px;display:flex;align-items:flex-start;gap:16px;flex-wrap:wrap">' +
+
+        // Thumbnail
+        '<div style="width:128px;height:96px;border-radius:10px;overflow:hidden;flex-shrink:0;background:linear-gradient(135deg,#a5f3fc,#67e8f9);display:flex;align-items:center;justify-content:center">' +
+          (imgUrl ? '<img src="' + imgUrl + '" alt="" style="width:100%;height:100%;object-fit:cover">' :
+            '<i class="fa-solid fa-water-ladder" style="font-size:28px;color:#0891b2"></i>') +
+        '</div>' +
+
+        // Info
+        '<div style="flex:1;min-width:0">' +
+          '<div style="font-size:15px;font-weight:700;color:#0f172a;margin-bottom:2px">' + escH(tour.nameTh) + '</div>' +
+          '<div style="font-size:12px;color:#94a3b8;margin-bottom:8px">' + escH(tour.nameEn || '') + ' · /' + escH(tour.slug) + '</div>' +
+          '<div style="font-size:12px;color:#64748b;display:flex;flex-wrap:wrap;gap:12px">' +
+            '<span>฿' + fmt(tour.pricePerPerson) + '/คน</span>' +
+            '<span>' + (tour.maxSeats || 0) + ' คน/รอบ</span>' +
+            '<span>' + (tour.durationHours || 0) + ' ชม.</span>' +
+            '<span>' + imgCount + ' รูป</span>' +
+            '<button class="btn btn-cyan" onclick="openScheduleModal(\'' + tour.id + '\')" style="font-size:12px;padding:3px 10px">' + schedCount + ' รอบ</button>' +
+          '</div>' +
+        '</div>' +
+
+        // Actions
+        '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:8px;flex-shrink:0">' +
+          '<span style="' + (tour.isActive ? 'background:#dcfce7;color:#15803d' : 'background:#f1f5f9;color:#64748b') + ';border-radius:999px;font-size:12px;font-weight:600;padding:3px 12px;margin-bottom:4px">' +
+            (tour.isActive ? 'เปิด' : 'ปิด') +
+          '</span>' +
+          '<div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end">' +
+            '<button class="btn btn-blue" onclick="openTourForm(\'' + tour.id + '\')"><i class="fa-solid fa-pen" style="margin-right:4px"></i>แก้ไข</button>' +
+            '<button class="btn btn-blue-outline" onclick="openImageManager(\'' + tour.id + '\',\'tours\')"><i class="fa-solid fa-image" style="margin-right:4px"></i>รูปภาพ</button>' +
+            '<button class="btn btn-gray" onclick="toggleTourActive(\'' + tour.id + '\',' + tour.isActive + ')">' +
+              (tour.isActive ? '<i class="fa-solid fa-eye-slash" style="margin-right:4px"></i>ปิดรับจอง' : '<i class="fa-solid fa-eye" style="margin-right:4px"></i>เปิดรับจอง') +
+            '</button>' +
+          '</div>' +
+        '</div>' +
+      '</div>';
+    });
+    html += '</div>';
+  }
+
+  html += '</div>'; // tours-root
+  html += tourFormModalHtml();
+  html += scheduleModalHtml();
+  html += imageManagerHtml();
+
+  pc.insertAdjacentHTML('beforeend', html);
+}
+
+// ──────────────────────────────────────────────────────────────
+// Tour Form Modal
+// ──────────────────────────────────────────────────────────────
+function tourFormModalHtml() {
+  return '<div id="tour-form-modal" style="display:none" class="modal-backdrop" onclick="if(event.target===this)closeTourForm()">' +
+    '<div class="modal-box">' +
+      '<div class="modal-header">' +
+        '<h2 id="tour-form-title" style="margin:0;font-size:17px;font-weight:700;color:#0f172a">เพิ่มทัวร์</h2>' +
+        '<button class="btn btn-gray" onclick="closeTourForm()" style="padding:6px 10px"><i class="fa-solid fa-xmark"></i></button>' +
+      '</div>' +
+      '<div class="modal-body">' +
+        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">' +
+          '<div>' +
+            '<label class="form-label">Slug <span style="color:#dc2626">*</span></label>' +
+            '<input id="tf-slug" class="form-input" placeholder="เช่น diving-tour-koh-tao">' +
+          '</div>' +
+          '<div></div>' +
+          '<div>' +
+            '<label class="form-label">ชื่อ (ไทย) <span style="color:#dc2626">*</span></label>' +
+            '<input id="tf-nameTh" class="form-input" placeholder="ชื่อทัวร์ภาษาไทย">' +
+          '</div>' +
+          '<div>' +
+            '<label class="form-label">ชื่อ (อังกฤษ)</label>' +
+            '<input id="tf-nameEn" class="form-input" placeholder="Tour name in English">' +
+          '</div>' +
+          '<div>' +
+            '<label class="form-label">คำอธิบาย (ไทย)</label>' +
+            '<textarea id="tf-descTh" class="form-input" rows="3" placeholder="รายละเอียดทัวร์ภาษาไทย"></textarea>' +
+          '</div>' +
+          '<div>' +
+            '<label class="form-label">คำอธิบาย (อังกฤษ)</label>' +
+            '<textarea id="tf-descEn" class="form-input" rows="3" placeholder="Description in English"></textarea>' +
+          '</div>' +
+          '<div>' +
+            '<label class="form-label">ราคา/คน (บาท) <span style="color:#dc2626">*</span></label>' +
+            '<input id="tf-price" type="number" min="0" class="form-input" placeholder="1500">' +
+          '</div>' +
+          '<div>' +
+            '<label class="form-label">ที่นั่งสูงสุด/รอบ</label>' +
+            '<input id="tf-seats" type="number" min="1" class="form-input" placeholder="20">' +
+          '</div>' +
+          '<div>' +
+            '<label class="form-label">ระยะเวลา (ชม.)</label>' +
+            '<input id="tf-hours" type="number" min="0" step="0.5" class="form-input" placeholder="6">' +
+          '</div>' +
+          '<div></div>' +
+        '</div>' +
+      '</div>' +
+      '<div class="modal-footer">' +
+        '<button class="btn btn-gray" onclick="closeTourForm()">ยกเลิก</button>' +
+        '<button class="btn btn-blue" id="tf-save-btn" onclick="saveTour()"><i class="fa-solid fa-floppy-disk" style="margin-right:6px"></i>บันทึก</button>' +
+      '</div>' +
+    '</div>' +
+  '</div>';
+}
+
+function openTourForm(tourId) {
+  _editingTour = null;
+  var titleEl = document.getElementById('tour-form-title');
+  if (tourId) {
+    _editingTour = _tours.find(function (t) { return t.id === tourId; });
+    titleEl.textContent = 'แก้ไขทัวร์';
+  } else {
+    titleEl.textContent = 'เพิ่มทัวร์';
+  }
+
+  var r = _editingTour;
+  document.getElementById('tf-slug').value = r ? r.slug : '';
+  document.getElementById('tf-nameTh').value = r ? r.nameTh : '';
+  document.getElementById('tf-nameEn').value = r ? r.nameEn || '' : '';
+  document.getElementById('tf-descTh').value = r ? r.descriptionTh || '' : '';
+  document.getElementById('tf-descEn').value = r ? r.descriptionEn || '' : '';
+  document.getElementById('tf-price').value = r ? r.pricePerPerson : '';
+  document.getElementById('tf-seats').value = r ? r.maxSeats : '';
+  document.getElementById('tf-hours').value = r ? r.durationHours : '';
+
+  document.getElementById('tour-form-modal').style.display = 'flex';
+  document.body.style.overflow = 'hidden';
+}
+
+function closeTourForm() {
+  document.getElementById('tour-form-modal').style.display = 'none';
+  document.body.style.overflow = '';
+}
+
+async function saveTour() {
+  var btn = document.getElementById('tf-save-btn');
+  var slug = document.getElementById('tf-slug').value.trim();
+  var nameTh = document.getElementById('tf-nameTh').value.trim();
+  var nameEn = document.getElementById('tf-nameEn').value.trim();
+  var descriptionTh = document.getElementById('tf-descTh').value.trim();
+  var descriptionEn = document.getElementById('tf-descEn').value.trim();
+  var pricePerPerson = parseFloat(document.getElementById('tf-price').value) || 0;
+  var maxSeats = parseInt(document.getElementById('tf-seats').value) || 0;
+  var durationHours = parseFloat(document.getElementById('tf-hours').value) || 0;
+
+  if (!slug || !nameTh) { showToast('กรุณากรอก Slug และชื่อทัวร์', 'error'); return; }
+
+  var body = { slug: slug, nameTh: nameTh, nameEn: nameEn, descriptionTh: descriptionTh, descriptionEn: descriptionEn, pricePerPerson: pricePerPerson, maxSeats: maxSeats, durationHours: durationHours };
+
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin" style="margin-right:6px"></i>กำลังบันทึก...';
+  try {
+    if (_editingTour) {
+      await adminPatch('/api/tours/' + _editingTour.id, body);
+      showToast('อัปเดตทัวร์สำเร็จ');
+    } else {
+      await adminPost('/api/tours', body);
+      showToast('เพิ่มทัวร์สำเร็จ');
+    }
+    closeTourForm();
+    _tours = [];
+    document.getElementById('tours-root')?.remove();
+    loadTours();
+  } catch (e) {
+    showToast(e.message, 'error');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fa-solid fa-floppy-disk" style="margin-right:6px"></i>บันทึก';
+  }
+}
+
+async function toggleTourActive(tourId, currentActive) {
+  try {
+    await adminPatch('/api/tours/' + tourId, { isActive: !currentActive });
+    showToast(currentActive ? 'ปิดรับจองแล้ว' : 'เปิดรับจองแล้ว');
+    var idx = _tours.findIndex(function (t) { return t.id === tourId; });
+    if (idx !== -1) _tours[idx].isActive = !currentActive;
+    document.getElementById('tours-root')?.remove();
+    renderPage();
+  } catch (e) {
+    showToast(e.message, 'error');
+  }
+}
+
+// ──────────────────────────────────────────────────────────────
+// Schedule Modal
+// ──────────────────────────────────────────────────────────────
+function scheduleModalHtml() {
+  return '<div id="sched-modal" style="display:none" class="modal-backdrop" onclick="if(event.target===this)closeScheduleModal()">' +
+    '<div class="modal-box" style="max-width:540px">' +
+      '<div class="modal-header">' +
+        '<div>' +
+          '<h2 style="margin:0 0 2px;font-size:17px;font-weight:700;color:#0f172a">รอบออกเดินทาง</h2>' +
+          '<p id="sched-tour-name" style="margin:0;font-size:12px;color:#94a3b8"></p>' +
+        '</div>' +
+        '<button class="btn btn-gray" onclick="closeScheduleModal()" style="padding:6px 10px"><i class="fa-solid fa-xmark"></i></button>' +
+      '</div>' +
+      '<div class="modal-body">' +
+        // Add form
+        '<div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:16px;margin-bottom:20px">' +
+          '<p style="margin:0 0 12px;font-size:13px;font-weight:600;color:#374151"><i class="fa-solid fa-plus" style="margin-right:6px;color:#2563eb"></i>เพิ่มรอบใหม่</p>' +
+          '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;align-items:end">' +
+            '<div>' +
+              '<label class="form-label" style="font-size:12px">วันที่</label>' +
+              '<input id="sched-date" type="date" class="form-input">' +
+            '</div>' +
+            '<div>' +
+              '<label class="form-label" style="font-size:12px">เวลา</label>' +
+              '<input id="sched-time" type="time" value="08:00" class="form-input">' +
+            '</div>' +
+            '<div>' +
+              '<label class="form-label" style="font-size:12px">ที่นั่ง</label>' +
+              '<input id="sched-seats" type="number" min="1" class="form-input" placeholder="20">' +
+            '</div>' +
+          '</div>' +
+          '<button class="btn btn-blue" onclick="addSchedule()" id="sched-add-btn" style="margin-top:12px;width:100%">เพิ่มรอบ</button>' +
+        '</div>' +
+        // Schedule list
+        '<div id="sched-list"></div>' +
+      '</div>' +
+    '</div>' +
+  '</div>';
+}
+
+async function openScheduleModal(tourId) {
+  _scheduleTour = _tours.find(function (t) { return t.id === tourId; });
+  document.getElementById('sched-tour-name').textContent = _scheduleTour ? _scheduleTour.nameTh : '';
+  document.getElementById('sched-modal').style.display = 'flex';
+  document.body.style.overflow = 'hidden';
+  // Set default date to today
+  var today = new Date().toISOString().slice(0, 10);
+  document.getElementById('sched-date').value = today;
+  document.getElementById('sched-seats').value = _scheduleTour ? (_scheduleTour.maxSeats || '') : '';
+  await loadSchedules();
+}
+
+function closeScheduleModal() {
+  document.getElementById('sched-modal').style.display = 'none';
+  document.body.style.overflow = '';
+  _scheduleTour = null;
+  _schedules = [];
+}
+
+async function loadSchedules() {
+  var listEl = document.getElementById('sched-list');
+  listEl.innerHTML = '<div style="text-align:center;padding:20px;color:#94a3b8"><i class="fa-solid fa-circle-notch fa-spin"></i></div>';
+  try {
+    _schedules = await adminGet('/api/tours/' + _scheduleTour.id + '/schedules');
+  } catch (e) {
+    _schedules = [];
+  }
+  renderScheduleList();
+}
+
+function renderScheduleList() {
+  var listEl = document.getElementById('sched-list');
+  if (_schedules.length === 0) {
+    listEl.innerHTML = '<div style="text-align:center;padding:24px;color:#cbd5e1;font-size:13px"><i class="fa-regular fa-calendar" style="font-size:24px;margin-bottom:8px;display:block"></i>ยังไม่มีรอบออกเดินทาง</div>';
+    return;
+  }
+
+  listEl.innerHTML = '<p style="font-size:13px;font-weight:600;color:#374151;margin:0 0 10px">รอบทั้งหมด (' + _schedules.length + ')</p>' +
+    _schedules.map(function (s) {
+      var dateStr = fmtDate(s.departureDate);
+      return '<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border:1px solid #f1f5f9;border-radius:8px;margin-bottom:6px">' +
+        '<div>' +
+          '<span style="font-size:13px;font-weight:600;color:#1e293b;margin-right:12px"><i class="fa-regular fa-calendar" style="color:#0891b2;margin-right:6px"></i>' + dateStr + '</span>' +
+          '<span style="font-size:13px;color:#475569;margin-right:12px"><i class="fa-regular fa-clock" style="color:#0891b2;margin-right:4px"></i>' + escH(s.departureTime) + '</span>' +
+          '<span style="font-size:12px;color:#64748b">' + (s.availableSeats || 0) + ' ที่นั่ง</span>' +
+        '</div>' +
+        '<button class="btn btn-red" onclick="deleteSchedule(\'' + s.id + '\')" style="font-size:12px;padding:5px 10px">' +
+          '<i class="fa-solid fa-trash" style="margin-right:4px"></i>ลบ' +
+        '</button>' +
+      '</div>';
+    }).join('');
+}
+
+async function addSchedule() {
+  var btn = document.getElementById('sched-add-btn');
+  var date = document.getElementById('sched-date').value;
+  var time = document.getElementById('sched-time').value;
+  var seats = parseInt(document.getElementById('sched-seats').value) || 0;
+
+  if (!date || !time) { showToast('กรุณากรอกวันที่และเวลา', 'error'); return; }
+
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin" style="margin-right:6px"></i>กำลังเพิ่ม...';
+  try {
+    await adminPost('/api/tours/' + _scheduleTour.id + '/schedules', {
+      departureDate: date,
+      departureTime: time,
+      availableSeats: seats
+    });
+    showToast('เพิ่มรอบสำเร็จ');
+    // Update count in tour list
+    var idx = _tours.findIndex(function (t) { return t.id === _scheduleTour.id; });
+    if (idx !== -1) {
+      if (!_tours[idx]._count) _tours[idx]._count = {};
+      _tours[idx]._count.schedules = (_tours[idx]._count.schedules || 0) + 1;
+    }
+    await loadSchedules();
+  } catch (e) {
+    showToast(e.message, 'error');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = 'เพิ่มรอบ';
+  }
+}
+
+async function deleteSchedule(schedId) {
+  if (!confirm('ลบรอบนี้?')) return;
+  try {
+    await adminDelete('/api/tours/schedules/' + schedId);
+    showToast('ลบรอบแล้ว');
+    var idx = _tours.findIndex(function (t) { return t.id === _scheduleTour.id; });
+    if (idx !== -1 && _tours[idx]._count && _tours[idx]._count.schedules > 0) {
+      _tours[idx]._count.schedules--;
+    }
+    await loadSchedules();
+  } catch (e) {
+    showToast(e.message, 'error');
+  }
+}
+
+// ──────────────────────────────────────────────────────────────
+// Image Manager
+// ──────────────────────────────────────────────────────────────
+function imageManagerHtml() {
+  return '<div id="img-manager-modal" style="display:none" class="modal-backdrop" onclick="if(event.target===this)closeImageManager()">' +
+    '<div class="modal-box" style="max-width:600px">' +
+      '<div class="modal-header">' +
+        '<div>' +
+          '<h2 style="margin:0 0 2px;font-size:17px;font-weight:700;color:#0f172a">จัดการรูปภาพ</h2>' +
+          '<p id="img-count-label" style="margin:0;font-size:12px;color:#94a3b8">0/10</p>' +
+        '</div>' +
+        '<button class="btn btn-gray" onclick="closeImageManager()" style="padding:6px 10px"><i class="fa-solid fa-xmark"></i></button>' +
+      '</div>' +
+      '<div class="modal-body">' +
+        '<div id="img-grid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px"></div>' +
+        '<div id="img-upload-area">' +
+          '<label style="display:flex;align-items:center;justify-content:center;gap:10px;padding:14px;border:2px dashed #d1d5db;border-radius:10px;cursor:pointer;color:#64748b;font-size:13px" onmouseover="this.style.borderColor=\'#2563eb\'" onmouseout="this.style.borderColor=\'#d1d5db\'">' +
+            '<i class="fa-solid fa-cloud-arrow-up" style="font-size:20px;color:#2563eb"></i>' +
+            '<span>อัปโหลดรูปภาพ (สูงสุด 10 รูป)</span>' +
+            '<input id="img-file-input" type="file" accept="image/*" multiple style="display:none" onchange="uploadImages(this.files)">' +
+          '</label>' +
+        '</div>' +
+      '</div>' +
+    '</div>' +
+  '</div>';
+}
+
+async function openImageManager(resourceId, resource) {
+  _imgTour = { id: resourceId, resource: resource };
+  document.getElementById('img-manager-modal').style.display = 'flex';
+  document.body.style.overflow = 'hidden';
+  await loadImages();
+}
+
+function closeImageManager() {
+  document.getElementById('img-manager-modal').style.display = 'none';
+  document.body.style.overflow = '';
+  _imgTour = null;
+  _imgImages = [];
+  document.getElementById('tours-root')?.remove();
+  loadTours();
+}
+
+async function loadImages() {
+  var grid = document.getElementById('img-grid');
+  grid.innerHTML = '<div style="grid-column:span 3;text-align:center;padding:24px;color:#94a3b8"><i class="fa-solid fa-circle-notch fa-spin"></i></div>';
+  try {
+    _imgImages = await adminGet('/api/' + _imgTour.resource + '/' + _imgTour.id + '/images');
+  } catch (e) {
+    _imgImages = [];
+  }
+  renderImageGrid();
+}
+
+function renderImageGrid() {
+  var grid = document.getElementById('img-grid');
+  var label = document.getElementById('img-count-label');
+  var count = _imgImages.length;
+  label.textContent = count + '/10';
+
+  var uploadArea = document.getElementById('img-upload-area');
+  uploadArea.style.display = count >= 10 ? 'none' : 'block';
+
+  if (count === 0) {
+    grid.innerHTML = '<div style="grid-column:span 3;text-align:center;padding:32px;color:#cbd5e1"><i class="fa-solid fa-images" style="font-size:36px;margin-bottom:8px;display:block"></i>ยังไม่มีรูปภาพ</div>';
+    return;
+  }
+
+  grid.innerHTML = _imgImages.map(function (img) {
+    return '<div class="img-cell" style="position:relative;aspect-ratio:1;border-radius:10px;overflow:hidden;background:#f1f5f9;cursor:pointer">' +
+      '<img src="' + escH(img.url) + '" style="width:100%;height:100%;object-fit:cover">' +
+      (img.isMain ? '<span style="position:absolute;top:6px;left:6px;background:#f59e0b;color:#fff;font-size:10px;font-weight:700;padding:2px 8px;border-radius:999px;pointer-events:none"><i class="fa-solid fa-star" style="margin-right:3px"></i>หลัก</span>' : '') +
+      '<div class="img-overlay" style="position:absolute;inset:0;background:rgba(0,0,0,0);transition:.2s;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px">' +
+        (!img.isMain ? '<button class="btn" onclick="setMainImage(\'' + img.id + '\')" style="background:#f59e0b;color:#fff;font-size:11px;padding:5px 10px">ตั้งเป็นหลัก</button>' : '') +
+        '<button class="btn" onclick="deleteImage(\'' + img.id + '\')" style="background:#ef4444;color:#fff;font-size:11px;padding:5px 10px">ลบ</button>' +
+      '</div>' +
+    '</div>';
+  }).join('');
+
+  grid.querySelectorAll('.img-cell').forEach(function (cell) {
+    var overlay = cell.querySelector('.img-overlay');
+    var btns = overlay ? overlay.querySelectorAll('button') : [];
+    cell.addEventListener('mouseenter', function () {
+      if (overlay) overlay.style.background = 'rgba(0,0,0,0.55)';
+    });
+    cell.addEventListener('mouseleave', function () {
+      if (overlay) overlay.style.background = 'rgba(0,0,0,0)';
+    });
+  });
+}
+
+async function uploadImages(files) {
+  if (!files || files.length === 0) return;
+  var remaining = 10 - _imgImages.length;
+  var toUpload = Array.from(files).slice(0, remaining);
+  for (var i = 0; i < toUpload.length; i++) {
+    var fd = new FormData();
+    fd.append('file', toUpload[i]);
+    try {
+      var res = await fetch(API + '/api/' + _imgTour.resource + '/' + _imgTour.id + '/images', {
+        method: 'POST',
+        headers: adminBearerHeader(),
+        body: fd
+      });
+      if (!res.ok) throw new Error('อัปโหลดล้มเหลว');
+      showToast('อัปโหลดสำเร็จ ' + (i + 1) + '/' + toUpload.length);
+    } catch (e) {
+      showToast('อัปโหลดล้มเหลว: ' + e.message, 'error');
+    }
+  }
+  document.getElementById('img-file-input').value = '';
+  await loadImages();
+}
+
+async function setMainImage(imageId) {
+  try {
+    await adminPatch('/api/' + _imgTour.resource + '/images/' + imageId);
+    showToast('ตั้งเป็นรูปหลักแล้ว');
+    await loadImages();
+  } catch (e) {
+    showToast(e.message, 'error');
+  }
+}
+
+async function deleteImage(imageId) {
+  if (!confirm('ลบรูปภาพนี้?')) return;
+  try {
+    await adminDelete('/api/' + _imgTour.resource + '/images/' + imageId);
+    showToast('ลบรูปภาพแล้ว');
+    await loadImages();
+  } catch (e) {
+    showToast(e.message, 'error');
+  }
+}
+
+// ──────────────────────────────────────────────────────────────
+// Utils
+// ──────────────────────────────────────────────────────────────
+function escH(s) {
+  return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+</script>
+</body>
+</html>

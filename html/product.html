@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>รายละเอียดสินค้า — JongJongDi</title>
+  <meta name="description" content="รายละเอียดสินค้าไทย-จีน JongJongDi">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script src="_lib.js"></script>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0;}
+    body{font-family:'Prompt',sans-serif;color:#334155;background:#f8fafc;-webkit-font-smoothing:antialiased;}
+    a{text-decoration:none;}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    .spinner{display:inline-block;width:40px;height:40px;border:3px solid #e2e8f0;border-top-color:#2563eb;border-radius:50%;animation:spin .8s linear infinite;}
+    @keyframes fadeIn{from{opacity:0;}to{opacity:1;}}
+    @media(max-width:768px){
+      #nav-links{display:none!important;}
+      #main-cols{flex-direction:column!important;}
+      #sidebar-col{position:static!important;width:100%!important;}
+    }
+  </style>
+</head>
+<body style="padding-top:80px;">
+
+<!-- Loading state -->
+<div id="page-loading" style="min-height:60vh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;">
+  <div class="spinner"></div>
+  <p style="color:#94a3b8;font-size:14px;">กำลังโหลดข้อมูลสินค้า...</p>
+</div>
+
+<!-- 404 state -->
+<div id="page-404" style="display:none;min-height:60vh;display:none;flex-direction:column;align-items:center;justify-content:center;padding:40px 20px;text-align:center;">
+  <div style="width:80px;height:80px;border-radius:50%;background:#fef2f2;display:flex;align-items:center;justify-content:center;margin-bottom:20px;">
+    <i class="fa-solid fa-circle-exclamation" style="font-size:32px;color:#ef4444;"></i>
+  </div>
+  <h2 style="font-size:22px;font-weight:700;color:#1e293b;margin-bottom:8px;">ไม่พบสินค้านี้</h2>
+  <p style="font-size:14px;color:#94a3b8;margin-bottom:24px;">สินค้าที่คุณกำลังมองหาอาจถูกลบหรือไม่มีอยู่ในระบบ</p>
+  <a href="index.html" style="display:inline-flex;align-items:center;gap:8px;background:#2563eb;color:#fff;border-radius:10px;padding:10px 24px;font-size:14px;font-weight:600;">
+    <i class="fa-solid fa-arrow-left"></i> กลับหน้าแรก
+  </a>
+</div>
+
+<!-- Main content -->
+<div id="page-content" style="display:none;animation:fadeIn .4s ease-out;"></div>
+
+<script>
+function show404() {
+  document.getElementById('page-loading').style.display = 'none';
+  const el404 = document.getElementById('page-404');
+  el404.style.display = 'flex';
+}
+
+(async function() {
+  const lang = getLang();
+  const slug = getQP('slug');
+
+  if (!slug) { show404(); return; }
+
+  const product = await getProduct(slug);
+  if (!product) { show404(); return; }
+
+  // ── Helpers ────────────────────────────────────────────────────────────────
+  const name = pick(product.nameTh, product.nameEn, lang);
+  const desc = pick(product.descriptionTh, product.descriptionEn, lang);
+  const img  = mainImageUrl(product.images);
+  const images = product.images || [];
+
+  // ── Build page ─────────────────────────────────────────────────────────────
+  const content = document.getElementById('page-content');
+
+  // Hero background: image if available, else amber/yellow gradient
+  const heroBg = img
+    ? `background:#fef3c7;`
+    : `background:linear-gradient(135deg,#fef3c7,#f59e0b);`;
+
+  // Gallery card only if more than 1 image
+  const galleryCard = images.length > 1 ? `
+    <div style="background:#fff;border-radius:16px;border:1px solid #f1f5f9;box-shadow:0 1px 4px rgba(0,0,0,.06);padding:24px;margin-bottom:24px;">
+      <h2 style="font-weight:700;color:#1e293b;font-size:16px;margin-bottom:16px;">
+        <i class="fa-solid fa-images" style="color:#2563eb;margin-right:8px;"></i>${pick('รูปภาพ', 'Images', lang)} (${images.length})
+      </h2>
+      ${renderGallery(images, name)}
+    </div>
+  ` : '';
+
+  // Location + delivery chips
+  const chips = (product.location || product.deliveryNote) ? `
+    <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:20px;">
+      ${product.location ? `
+        <span style="display:inline-flex;align-items:center;gap:6px;background:#eff6ff;color:#2563eb;font-size:12px;font-weight:600;padding:5px 12px;border-radius:9999px;border:1px solid #bfdbfe;">
+          <i class="fa-solid fa-location-dot" style="color:#ef4444;"></i>${product.location}
+        </span>` : ''}
+      ${product.deliveryNote ? `
+        <span style="display:inline-flex;align-items:center;gap:6px;background:#fefce8;color:#a16207;font-size:12px;font-weight:600;padding:5px 12px;border-radius:9999px;border:1px solid #fde68a;">
+          <i class="fa-solid fa-truck"></i>${product.deliveryNote}
+        </span>` : ''}
+    </div>
+  ` : '';
+
+  content.innerHTML = `
+    <!-- Hero -->
+    <div style="position:relative;height:224px;${heroBg}overflow:hidden;">
+      ${img ? `<img src="${img}" alt="${name}" style="width:100%;height:100%;object-fit:cover;">` : ''}
+      <div style="position:absolute;inset:0;background:linear-gradient(to top,rgba(0,0,0,.55),rgba(0,0,0,.05));"></div>
+
+      <!-- Badge top-right -->
+      ${product.badge ? `
+        <div style="position:absolute;top:16px;right:16px;background:#ef4444;color:#fff;font-size:11px;font-weight:700;padding:5px 12px;border-radius:9999px;text-transform:uppercase;box-shadow:0 2px 8px rgba(239,68,68,.4);">
+          <i class="fa-solid fa-star" style="color:#fcd34d;margin-right:4px;"></i>${product.badge}
+        </div>` : ''}
+
+      <!-- Back button top-left -->
+      <a href="index.html" style="position:absolute;top:16px;left:16px;display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,.15);backdrop-filter:blur(4px);border:1px solid rgba(255,255,255,.25);color:#fff;border-radius:9999px;padding:6px 14px;font-size:13px;font-weight:500;" onmouseover="this.style.background='rgba(255,255,255,.25)'" onmouseout="this.style.background='rgba(255,255,255,.15)'">
+        <i class="fa-solid fa-arrow-left"></i> ${pick('กลับหน้าแรก', 'Home', lang)}
+      </a>
+
+      <!-- Product name overlay bottom-left -->
+      <div style="position:absolute;bottom:0;left:0;right:0;padding:20px 24px;">
+        <h1 style="font-size:clamp(17px,3vw,24px);font-weight:700;color:#fff;text-shadow:0 2px 6px rgba(0,0,0,.4);line-height:1.3;">${name}</h1>
+      </div>
+    </div>
+
+    <!-- Main layout -->
+    <div style="max-width:1200px;margin:0 auto;padding:32px 16px 60px;">
+      <div id="main-cols" style="display:flex;gap:28px;align-items:flex-start;">
+
+        <!-- Left column -->
+        <div style="flex:2 1 0;min-width:0;">
+
+          ${chips}
+
+          <!-- Product details card -->
+          <div style="background:#fff;border-radius:16px;border:1px solid #f1f5f9;box-shadow:0 1px 4px rgba(0,0,0,.06);padding:24px;margin-bottom:24px;">
+            <h2 style="font-weight:700;color:#1e293b;font-size:16px;margin-bottom:14px;">
+              <i class="fa-solid fa-circle-info" style="color:#2563eb;margin-right:8px;"></i>${pick('รายละเอียดสินค้า', 'Product details', lang)}
+            </h2>
+            <p style="font-size:14px;color:#475569;line-height:1.9;">${desc || pick('ไม่มีรายละเอียด', 'No description available', lang)}</p>
+          </div>
+
+          <!-- Gallery card -->
+          ${galleryCard}
+
+        </div>
+
+        <!-- Right sticky sidebar -->
+        <div id="sidebar-col" style="width:300px;flex-shrink:0;position:sticky;top:96px;">
+          <div style="background:#fff;border-radius:16px;border:1px solid #f1f5f9;box-shadow:0 4px 20px rgba(0,0,0,.08);padding:24px;">
+
+            <!-- Old price -->
+            ${product.oldPrice ? `
+              <div style="font-size:14px;color:#94a3b8;text-decoration:line-through;margin-bottom:4px;">${fmt(product.oldPrice)}.-</div>
+            ` : ''}
+
+            <!-- Current price -->
+            <div style="font-size:32px;font-weight:700;color:#f59e0b;line-height:1.1;margin-bottom:4px;">
+              ${fmt(product.price)}<span style="font-size:15px;font-weight:400;color:#94a3b8;">.-${product.unitLabel ? product.unitLabel : ''}</span>
+            </div>
+
+            <div style="height:1px;background:#f1f5f9;margin:16px 0;"></div>
+
+            <!-- Info box -->
+            <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:14px;">
+              <div style="display:flex;align-items:flex-start;gap:10px;">
+                <i class="fa-solid fa-circle-info" style="color:#2563eb;margin-top:2px;flex-shrink:0;"></i>
+                <p style="font-size:13px;color:#1d4ed8;line-height:1.7;margin:0;">
+                  ${pick(
+                    'สนใจสั่งซื้อ ติดต่อผู้ขายผ่านช่องทางติดต่อของร้าน',
+                    "To order, please contact the seller via the shop's channels.",
+                    lang
+                  )}
+                </p>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+      </div>
+    </div>
+  `;
+
+  document.getElementById('page-loading').style.display = 'none';
+  document.getElementById('page-content').style.display = 'block';
+
+  // Update page title
+  document.title = `${name} — JongJongDi`;
+})();
+
+initPage({ base: '' });
+</script>
+</body>
+</html>

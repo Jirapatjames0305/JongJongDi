@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>รายละเอียดทัวร์ — JongJongDi</title>
+  <meta name="description" content="รายละเอียดทัวร์ดำน้ำและทัวร์ทะเล">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script src="_lib.js"></script>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0;}
+    body{font-family:'Prompt',sans-serif;color:#334155;background:#f8fafc;-webkit-font-smoothing:antialiased;}
+    a{text-decoration:none;}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    .spinner{display:inline-block;width:36px;height:36px;border:3px solid #e2e8f0;border-top-color:#0891b2;border-radius:50%;animation:spin .8s linear infinite;}
+    @keyframes fadeIn{from{opacity:0;}to{opacity:1;}}
+    .scrollbar-hide::-webkit-scrollbar{display:none;}
+    .scrollbar-hide{-ms-overflow-style:none;scrollbar-width:none;}
+    @media(max-width:768px){
+      #nav-links{display:none!important;}
+      #main-cols{flex-direction:column!important;}
+      #booking-col{position:static!important;width:100%!important;}
+    }
+  </style>
+</head>
+<body style="padding-top:80px;">
+
+<!-- Loading state -->
+<div id="page-loading" style="text-align:center;padding:100px 20px;">
+  <div class="spinner"></div>
+  <p style="margin-top:16px;color:#94a3b8;font-size:14px;">กำลังโหลดข้อมูลทัวร์...</p>
+</div>
+
+<!-- 404 state -->
+<div id="page-404" style="display:none;text-align:center;padding:100px 20px;">
+  <div style="width:80px;height:80px;border-radius:50%;background:#fef2f2;display:flex;align-items:center;justify-content:center;margin:0 auto 20px;">
+    <i class="fa-solid fa-circle-exclamation" style="font-size:32px;color:#ef4444;"></i>
+  </div>
+  <h2 style="font-size:22px;font-weight:700;color:#1e293b;margin-bottom:8px;">ไม่พบทัวร์นี้</h2>
+  <p style="font-size:14px;color:#94a3b8;margin-bottom:24px;">ทัวร์ที่คุณกำลังมองหาอาจถูกลบหรือไม่มีอยู่ในระบบ</p>
+  <a href="tours.html" style="display:inline-flex;align-items:center;gap:8px;background:#0891b2;color:#fff;border-radius:10px;padding:10px 20px;font-size:14px;font-weight:600;"><i class="fa-solid fa-arrow-left"></i> กลับไปดูทัวร์ทั้งหมด</a>
+</div>
+
+<!-- Main content (injected after load) -->
+<div id="page-content" style="display:none;animation:fadeIn .4s ease-out;"></div>
+
+<script>
+function show404() {
+  document.getElementById('page-loading').style.display = 'none';
+  document.getElementById('page-404').style.display = 'block';
+}
+
+(async function() {
+  const lang  = getLang();
+  const slug  = getQP('slug');
+  const urlDate = getQP('date');
+
+  if (!slug) { show404(); return; }
+
+  const tour = await getTour(slug);
+  if (!tour) { show404(); return; }
+
+  // ── State ──────────────────────────────────────────────────────────────────
+  let selectedDate    = null;   // 'YYYY-MM-DD'
+  let selectedSched   = null;   // full schedule object
+  let guests          = 1;
+
+  // ── Helpers ────────────────────────────────────────────────────────────────
+  const name = pick(tour.nameTh, tour.nameEn, lang);
+  const desc = pick(tour.descriptionTh, tour.descriptionEn, lang);
+  const img  = mainImageUrl(tour.images);
+
+  const schedules = tour.schedules || [];
+
+  // Group schedules by date string 'YYYY-MM-DD'
+  function groupByDate(scheds) {
+    const map = {};
+    scheds.forEach(s => {
+      const d = s.departureDate ? s.departureDate.slice(0, 10) : null;
+      if (!d) return;
+      if (!map[d]) map[d] = [];
+      map[d].push(s);
+    });
+    return map;
+  }
+
+  const schedByDate = groupByDate(schedules);
+  const sortedDates = Object.keys(schedByDate).sort();
+
+  // Auto-pre-select if URL date matches a schedule with seats
+  if (urlDate && schedByDate[urlDate]) {
+    const avail = schedByDate[urlDate].find(s => s.availableSeats > 0);
+    if (avail) {
+      selectedDate  = urlDate;
+      selectedSched = schedByDate[urlDate].length === 1 ? avail : null;
+    }
+  }
+
+  // ── Render functions ───────────────────────────────────────────────────────
+
+  function renderDateCards() {
+    if (!sortedDates.length) return '';
+    const days_th  = ['อา','จ','อ','พ','พฤ','ศ','ส'];
+    const days_en  = ['Su','Mo','Tu','We','Th','Fr','Sa'];
+    const months_th = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+    const months_en = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    const days   = lang === 'en' ? days_en : days_th;
+    const months = lang === 'en' ? months_en : months_th;
+
+    return sortedDates.map(d => {
+      const dt   = new Date(d + 'T00:00:00');
+      const dow  = days[dt.getDay()];
+      const day  = dt.getDate();
+      const mon  = months[dt.getMonth()];
+      const scheds    = schedByDate[d];
+      const totalSeats = scheds.reduce((sum, s) => sum + (s.availableSeats || 0), 0);
+      const isFull    = totalSeats === 0;
+      const isActive  = selectedDate === d;
+
+      const activeBg  = isActive ? 'background:#0891b2;border-color:#0891b2;' : 'background:#fff;border-color:#e2e8f0;';
+      const textColor = isActive ? 'color:#fff;' : (isFull ? 'color:#94a3b8;' : 'color:#1e293b;');
+      const subColor  = isActive ? 'color:rgba(255,255,255,.8);' : 'color:#64748b;';
+      const cursor    = isFull ? 'cursor:not-allowed;opacity:.6;' : 'cursor:pointer;';
+
+      return `<button onclick="${isFull ? '' : `selectDate('${d}')`}" style="flex-shrink:0;width:72px;border:2px solid;border-radius:12px;padding:10px 6px;text-align:center;transition:.2s;${activeBg}${cursor}" ${isFull ? 'disabled' : ''}>
+        <div style="font-size:11px;font-weight:500;${subColor}">${dow}</div>
+        <div style="font-size:20px;font-weight:700;${textColor}line-height:1.1;margin:2px 0;">${day}</div>
+        <div style="font-size:11px;${subColor}">${mon}</div>
+        <div style="margin-top:6px;font-size:10px;font-weight:600;${isFull ? 'color:#ef4444;' : (isActive ? 'color:rgba(255,255,255,.9);' : 'color:#0891b2;')}">
+          ${isFull ? pick('เต็ม', 'Full', lang) : `${totalSeats} ${pick('ที่ว่าง', 'seats', lang)}`}
+        </div>
+      </button>`;
+    }).join('');
+  }
+
+  function renderTimeButtons() {
+    if (!selectedDate) return '';
+    const scheds = schedByDate[selectedDate] || [];
+    return scheds.map(s => {
+      const isActive = selectedSched && selectedSched.id === s.id;
+      const isFull   = s.availableSeats === 0;
+      const activeBg = isActive ? 'background:#0891b2;border-color:#0891b2;color:#fff;' : 'background:#fff;border-color:#e2e8f0;color:#1e293b;';
+      const cursor   = isFull ? 'cursor:not-allowed;opacity:.5;' : 'cursor:pointer;';
+      return `<button onclick="${isFull ? '' : `selectSched('${s.id}')`}" style="border:2px solid;border-radius:10px;padding:10px 14px;text-align:center;transition:.2s;${activeBg}${cursor}" ${isFull ? 'disabled' : ''}>
+        <div style="font-size:14px;font-weight:700;">${s.departureTime || '—'}</div>
+        <div style="font-size:11px;margin-top:3px;${isActive ? 'color:rgba(255,255,255,.8);' : 'color:#64748b;'}">
+          ${isFull ? pick('เต็ม', 'Full', lang) : `${s.availableSeats} ${pick('ที่ว่าง', 'seats', lang)}`}
+        </div>
+      </button>`;
+    }).join('');
+  }
+
+  function renderDepartureCard() {
+    if (!schedules.length) {
+      return `<div style="background:#fff;border-radius:16px;border:1px solid #f1f5f9;box-shadow:0 1px 4px rgba(0,0,0,.06);padding:24px;">
+        <h3 style="font-weight:700;color:#1e293b;margin-bottom:12px;font-size:16px;"><i class="fa-regular fa-calendar" style="color:#0891b2;margin-right:8px;"></i>${pick('เลือกวันและเวลา', 'Select Date & Time', lang)}</h3>
+        <div style="background:#f8fafc;border-radius:10px;padding:20px;text-align:center;color:#94a3b8;font-size:14px;">
+          <i class="fa-regular fa-calendar-xmark" style="font-size:28px;margin-bottom:8px;display:block;"></i>
+          ${pick('ยังไม่มีรอบที่เปิดจอง', 'No schedules available yet', lang)}
+        </div>
+      </div>`;
+    }
+
+    const step1Active = !selectedDate;
+    const step2Active = !!selectedDate;
+
+    return `<div style="background:#fff;border-radius:16px;border:1px solid #f1f5f9;box-shadow:0 1px 4px rgba(0,0,0,.06);padding:24px;">
+      <h3 style="font-weight:700;color:#1e293b;margin-bottom:20px;font-size:16px;"><i class="fa-regular fa-calendar" style="color:#0891b2;margin-right:8px;"></i>${pick('เลือกวันและเวลา', 'Select Date & Time', lang)}</h3>
+
+      <!-- Step 1: Date picker -->
+      <div style="margin-bottom:${step2Active ? '20px' : '0'};">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
+          <div style="width:22px;height:22px;border-radius:50%;background:${step1Active ? '#0891b2' : '#dcfce7'};color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;">
+            ${step1Active ? '1' : '<i class="fa-solid fa-check" style="font-size:10px;"></i>'}
+          </div>
+          <span style="font-size:13px;font-weight:600;color:#475569;">${pick('เลือกวันเดินทาง', 'Select departure date', lang)}</span>
+        </div>
+        <div style="display:flex;gap:10px;overflow-x:auto;padding-bottom:8px;" class="scrollbar-hide" id="date-scroll">
+          ${renderDateCards()}
+        </div>
+      </div>
+
+      <!-- Step 2: Time picker -->
+      ${step2Active ? `
+      <div>
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
+          <div style="width:22px;height:22px;border-radius:50%;background:${selectedSched ? '#dcfce7' : '#0891b2'};color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;">
+            ${selectedSched ? '<i class="fa-solid fa-check" style="font-size:10px;"></i>' : '2'}
+          </div>
+          <span style="font-size:13px;font-weight:600;color:#475569;">${pick('เลือกเวลาออกเดินทาง', 'Select departure time', lang)}</span>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:10px;">
+          ${renderTimeButtons()}
+        </div>
+      </div>` : ''}
+    </div>`;
+  }
+
+  function renderBookingCard() {
+    const maxG = selectedSched ? selectedSched.availableSeats : (tour.maxSeats || 1);
+    const total = (tour.pricePerPerson || 0) * guests;
+    const hasSchedule = !!selectedSched;
+
+    return `<div style="background:#fff;border-radius:16px;border:1px solid #f1f5f9;box-shadow:0 4px 20px rgba(0,0,0,.08);padding:24px;">
+
+      <!-- Price -->
+      <div style="margin-bottom:20px;">
+        <div style="font-size:12px;color:#94a3b8;margin-bottom:4px;">${pick('ราคาต่อท่าน', 'Per person', lang)}</div>
+        <div style="font-size:28px;font-weight:700;color:#f59e0b;">${(tour.pricePerPerson || 0).toLocaleString()}<span style="font-size:14px;font-weight:400;color:#94a3b8;"> ${pick('บาท', 'THB', lang)}</span></div>
+      </div>
+
+      <!-- Selected schedule info -->
+      ${hasSchedule ? `
+      <div style="background:#ecfeff;border:1px solid #a5f3fc;border-radius:10px;padding:12px;margin-bottom:16px;font-size:13px;color:#0e7490;">
+        <div style="font-weight:600;margin-bottom:4px;"><i class="fa-regular fa-calendar-check" style="margin-right:6px;"></i>${fmtDate(selectedSched.departureDate)}</div>
+        <div><i class="fa-regular fa-clock" style="margin-right:6px;"></i>${pick('เวลา', 'Time', lang)}: <strong>${selectedSched.departureTime}</strong></div>
+      </div>` : `
+      <div style="background:#f8fafc;border:1px dashed #e2e8f0;border-radius:10px;padding:12px;margin-bottom:16px;font-size:13px;color:#94a3b8;text-align:center;">
+        <i class="fa-regular fa-calendar" style="margin-right:6px;"></i>${pick('ยังไม่ได้เลือกรอบ', 'No schedule selected', lang)}
+      </div>`}
+
+      <!-- Guests control -->
+      <div style="margin-bottom:20px;">
+        <div style="font-size:13px;font-weight:600;color:#475569;margin-bottom:10px;">${pick('จำนวนผู้เดินทาง', 'Number of guests', lang)}</div>
+        <div style="display:flex;align-items:center;gap:12px;">
+          <button id="btn-minus" onclick="adjustGuests(-1)" style="width:36px;height:36px;border-radius:50%;border:2px solid #e2e8f0;background:#fff;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#64748b;transition:.15s;" onmouseover="this.style.borderColor='#0891b2';this.style.color='#0891b2';" onmouseout="this.style.borderColor='#e2e8f0';this.style.color='#64748b';">−</button>
+          <span id="guests-count" style="font-size:20px;font-weight:700;color:#1e293b;min-width:24px;text-align:center;">${guests}</span>
+          <button id="btn-plus" onclick="adjustGuests(1)" style="width:36px;height:36px;border-radius:50%;border:2px solid #e2e8f0;background:#fff;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#64748b;transition:.15s;" onmouseover="this.style.borderColor='#0891b2';this.style.color='#0891b2';" onmouseout="this.style.borderColor='#e2e8f0';this.style.color='#64748b';">+</button>
+          <span style="font-size:12px;color:#94a3b8;">${pick('สูงสุด', 'max', lang)} ${maxG} ${pick('ท่าน', 'guests', lang)}</span>
+        </div>
+      </div>
+
+      <!-- Price breakdown -->
+      <div style="background:#f8fafc;border-radius:10px;padding:14px;margin-bottom:20px;">
+        <div style="display:flex;justify-content:space-between;font-size:13px;color:#64748b;margin-bottom:6px;">
+          <span>${(tour.pricePerPerson || 0).toLocaleString()} × ${guests} ${pick('ท่าน', 'guests', lang)}</span>
+          <span>${total.toLocaleString()} ${pick('บาท', 'THB', lang)}</span>
+        </div>
+        <div style="border-top:1px solid #e2e8f0;padding-top:8px;margin-top:4px;display:flex;justify-content:space-between;font-weight:700;font-size:15px;color:#1e293b;">
+          <span>${pick('รวมทั้งหมด', 'Total', lang)}</span>
+          <span style="color:#0891b2;">${total.toLocaleString()} ${pick('บาท', 'THB', lang)}</span>
+        </div>
+      </div>
+
+      <!-- Book button -->
+      <button id="book-btn" onclick="doBook()" ${!hasSchedule ? 'disabled' : ''} style="width:100%;padding:14px;border-radius:12px;border:none;font-size:15px;font-weight:700;font-family:'Prompt',sans-serif;cursor:${hasSchedule ? 'pointer' : 'not-allowed'};background:${hasSchedule ? '#0891b2' : '#e2e8f0'};color:${hasSchedule ? '#fff' : '#94a3b8'};transition:.2s;">
+        <i class="fa-solid fa-ticket" style="margin-right:8px;"></i>${pick('จองเลย', 'Book Now', lang)}
+      </button>
+      ${!hasSchedule ? `<p style="text-align:center;font-size:12px;color:#94a3b8;margin-top:8px;">${pick('กรุณาเลือกวันและเวลาก่อน', 'Please select a date and time first', lang)}</p>` : ''}
+    </div>`;
+  }
+
+  // ── Build full page HTML ───────────────────────────────────────────────────
+
+  function buildPage() {
+    const content = document.getElementById('page-content');
+    content.innerHTML = `
+      <!-- Hero -->
+      <div style="position:relative;height:220px;background:${img ? 'transparent' : 'linear-gradient(135deg,#a5f3fc,#0891b2)'};overflow:hidden;">
+        ${img ? `<img src="${img}" alt="${name}" style="width:100%;height:100%;object-fit:cover;">` : ''}
+        <div style="position:absolute;inset:0;background:linear-gradient(to top,rgba(0,0,0,.65),rgba(0,0,0,.1));"></div>
+        <!-- Back button -->
+        <a href="tours.html" style="position:absolute;top:16px;left:16px;display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,.15);backdrop-filter:blur(4px);border:1px solid rgba(255,255,255,.25);color:#fff;border-radius:9999px;padding:6px 14px;font-size:13px;font-weight:500;text-decoration:none;transition:.2s;" onmouseover="this.style.background='rgba(255,255,255,.25)'" onmouseout="this.style.background='rgba(255,255,255,.15)'">
+          <i class="fa-solid fa-arrow-left"></i> ${pick('ทัวร์ทั้งหมด', 'All Tours', lang)}
+        </a>
+        <!-- Tour info overlay -->
+        <div style="position:absolute;bottom:0;left:0;right:0;padding:20px 24px;">
+          <h1 style="font-size:clamp(18px,3vw,26px);font-weight:700;color:#fff;margin-bottom:8px;text-shadow:0 2px 4px rgba(0,0,0,.3);">${name}</h1>
+          <div style="display:flex;flex-wrap:wrap;gap:10px;">
+            <span style="background:rgba(255,255,255,.15);backdrop-filter:blur(4px);border:1px solid rgba(255,255,255,.2);color:#fff;font-size:12px;font-weight:600;padding:4px 12px;border-radius:9999px;">
+              <i class="fa-regular fa-clock" style="margin-right:5px;"></i>${tour.durationHours} ${pick('ชั่วโมง', 'hours', lang)}
+            </span>
+            <span style="background:rgba(8,145,178,.7);backdrop-filter:blur(4px);color:#fff;font-size:12px;font-weight:600;padding:4px 12px;border-radius:9999px;">
+              <i class="fa-solid fa-users" style="margin-right:5px;"></i>${pick('สูงสุด', 'Up to', lang)} ${tour.maxSeats} ${pick('ท่าน', 'guests', lang)}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Main layout -->
+      <div style="max-width:1200px;margin:0 auto;padding:32px 16px 60px;">
+        <div id="main-cols" style="display:flex;gap:28px;align-items:flex-start;">
+
+          <!-- Left column -->
+          <div style="flex:1 1 0;min-width:0;">
+
+            <!-- Description card -->
+            <div style="background:#fff;border-radius:16px;border:1px solid #f1f5f9;box-shadow:0 1px 4px rgba(0,0,0,.06);padding:24px;margin-bottom:24px;">
+              <h2 style="font-weight:700;color:#1e293b;font-size:16px;margin-bottom:14px;"><i class="fa-solid fa-circle-info" style="color:#0891b2;margin-right:8px;"></i>${pick('รายละเอียด', 'Description', lang)}</h2>
+              <p style="font-size:14px;color:#475569;line-height:1.8;">${desc || pick('ไม่มีรายละเอียด', 'No description available', lang)}</p>
+              ${tour.images && tour.images.length > 1 ? `
+              <div style="margin-top:20px;">
+                ${renderGallery(tour.images, name)}
+              </div>` : ''}
+            </div>
+
+            <!-- Reviews -->
+            <div id="reviews-container" style="margin-bottom:24px;"></div>
+
+            <!-- Departure selector -->
+            <div id="departure-card">
+              ${renderDepartureCard()}
+            </div>
+
+          </div>
+
+          <!-- Right column (sticky booking card) -->
+          <div id="booking-col" style="width:320px;flex-shrink:0;position:sticky;top:96px;">
+            <div id="booking-card">
+              ${renderBookingCard()}
+            </div>
+          </div>
+
+        </div>
+      </div>
+    `;
+
+    // Render reviews async
+    const reviewsEl = content.querySelector('#reviews-container');
+    if (reviewsEl) renderReviews('tour', slug, reviewsEl, lang);
+  }
+
+  // ── Re-render partial sections ─────────────────────────────────────────────
+
+  function rerenderDeparture() {
+    const el = document.getElementById('departure-card');
+    if (el) el.innerHTML = renderDepartureCard();
+    rerenderBooking();
+  }
+
+  function rerenderBooking() {
+    const el = document.getElementById('booking-card');
+    if (el) el.innerHTML = renderBookingCard();
+    // sync guests display (in case guests clamped)
+    const gc = document.getElementById('guests-count');
+    if (gc) gc.textContent = guests;
+  }
+
+  // ── Global handlers (called from inline onclick) ───────────────────────────
+
+  window.selectDate = function(d) {
+    selectedDate = d;
+    selectedSched = null;
+    guests = 1;
+    // Auto-select if only one schedule on this date
+    const scheds = schedByDate[d] || [];
+    const avail  = scheds.filter(s => s.availableSeats > 0);
+    if (avail.length === 1) selectedSched = avail[0];
+    rerenderDeparture();
+  };
+
+  window.selectSched = function(id) {
+    const scheds = selectedDate ? (schedByDate[selectedDate] || []) : schedules;
+    selectedSched = scheds.find(s => s.id === id || String(s.id) === String(id)) || null;
+    guests = 1;
+    rerenderDeparture();
+  };
+
+  window.adjustGuests = function(delta) {
+    const maxG = selectedSched ? selectedSched.availableSeats : (tour.maxSeats || 1);
+    guests = Math.max(1, Math.min(maxG, guests + delta));
+    rerenderBooking();
+  };
+
+  window.doBook = function() {
+    if (!selectedSched) return;
+    const qs = new URLSearchParams({
+      type:       'DIVE_TOUR',
+      tourSlug:   slug,
+      scheduleId: String(selectedSched.id),
+      guests:     String(guests),
+    });
+    window.location.href = `booking.html?${qs}`;
+  };
+
+  // ── Init ───────────────────────────────────────────────────────────────────
+  document.getElementById('page-loading').style.display = 'none';
+  document.getElementById('page-content').style.display = 'block';
+  buildPage();
+})();
+
+initPage({ base: '' });
+</script>
+</body>
+</html>

@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ราคา High Season – JongJongDi Admin</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Prompt', sans-serif; background: #f8fafc; color: #1e293b; }
+  </style>
+  <script src="_lib.js"></script>
+</head>
+<body>
+<script>
+(async function () {
+  renderAdminShell({ activePage: 'seasons.html' });
+  const content = document.getElementById('page-content');
+
+  let seasons = [];
+  let rooms = [], tours = [];
+
+  function fmtDateShort(d) {
+    if (!d) return '—';
+    return new Date(d).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: '2-digit' });
+  }
+
+  function renderTable() {
+    const tbody = document.getElementById('seasons-tbody');
+    if (!tbody) return;
+    if (!seasons.length) {
+      tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;padding:48px;color:#94a3b8;">
+        <i class="fa-solid fa-tag" style="font-size:28px;display:block;margin-bottom:8px;color:#cbd5e1;"></i>ยังไม่มีช่วงราคา
+      </td></tr>`;
+      return;
+    }
+    tbody.innerHTML = seasons.map(s => {
+      const isRoom = !!s.roomId;
+      const typeBg = isRoom ? '#eff6ff' : '#cffafe';
+      const typeColor = isRoom ? '#2563eb' : '#0e7490';
+      const typeLabel = isRoom ? 'ที่พัก' : 'ทัวร์';
+      const targetName = isRoom ? (s.room?.nameTh || '—') : (s.tour?.nameTh || '—');
+
+      const priceHtml = s.absolutePrice
+        ? `<span style="background:#eff6ff;color:#2563eb;padding:3px 10px;border-radius:999px;font-size:13px;font-weight:600;">฿${fmt(s.absolutePrice)}</span>`
+        : `<span style="background:#fef9c3;color:#a16207;padding:3px 10px;border-radius:999px;font-size:13px;font-weight:600;">×${s.multiplier}</span>`;
+
+      return `<tr style="border-bottom:1px solid #f1f5f9;">
+        <td style="padding:14px 16px;font-size:14px;font-weight:600;color:#1e293b;">${s.name}</td>
+        <td style="padding:14px 16px;">
+          <span style="background:${typeBg};color:${typeColor};padding:2px 10px;border-radius:999px;font-size:12px;font-weight:600;margin-right:6px;">${typeLabel}</span>
+          <span style="font-size:13px;color:#475569;">${targetName}</span>
+        </td>
+        <td style="padding:14px 16px;">
+          <div style="font-size:13px;color:#1e293b;">${fmtDateShort(s.startDate)}</div>
+          <div style="font-size:13px;color:#94a3b8;">ถึง ${fmtDateShort(s.endDate)}</div>
+        </td>
+        <td style="padding:14px 16px;">${priceHtml}</td>
+        <td style="padding:14px 16px;">
+          <button onclick="deleteSeason(${s.id})" style="background:#fee2e2;color:#dc2626;border:none;padding:6px 12px;border-radius:7px;font-size:13px;font-family:Prompt,sans-serif;cursor:pointer;">
+            <i class="fa-solid fa-trash"></i>
+          </button>
+        </td>
+      </tr>`;
+    }).join('');
+  }
+
+  function setTargetType(type) {
+    document.getElementById('f-target-type').value = type;
+    const btnR = document.getElementById('btn-season-room');
+    const btnT = document.getElementById('btn-season-tour');
+    if (type === 'ROOM') {
+      btnR.style.border = '2px solid #2563eb'; btnR.style.background = '#eff6ff'; btnR.style.color = '#2563eb';
+      btnT.style.border = '2px solid #e2e8f0'; btnT.style.background = '#fff'; btnT.style.color = '#64748b';
+    } else {
+      btnT.style.border = '2px solid #2563eb'; btnT.style.background = '#eff6ff'; btnT.style.color = '#2563eb';
+      btnR.style.border = '2px solid #e2e8f0'; btnR.style.background = '#fff'; btnR.style.color = '#64748b';
+    }
+    const sel = document.getElementById('f-target-id');
+    if (!sel) return;
+    const src = type === 'ROOM' ? rooms : tours;
+    sel.innerHTML = '<option value="">— เลือก —</option>' +
+      src.map(x => `<option value="${x.id}">${x.nameTh}</option>`).join('');
+  }
+
+  window.setSeasonTargetType = setTargetType;
+
+  function buildPage() {
+    content.innerHTML = `
+      <div style="display:grid;grid-template-columns:1fr 2fr;gap:20px;align-items:start;">
+
+        <!-- LEFT: Form Card -->
+        <div style="background:#fff;border:1px solid #e2e8f0;border-radius:16px;padding:24px;position:sticky;top:20px;">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:20px;">
+            <div style="width:38px;height:38px;background:#fef9c3;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+              <i class="fa-solid fa-tag" style="color:#a16207;font-size:16px;"></i>
+            </div>
+            <h2 style="font-size:16px;font-weight:700;color:#1e293b;">เพิ่มช่วงราคา</h2>
+          </div>
+          <form id="season-form" onsubmit="submitSeason(event)" style="display:flex;flex-direction:column;gap:16px;">
+            <div>
+              <label style="font-size:13px;font-weight:600;color:#374151;display:block;margin-bottom:6px;">ชื่อช่วง <span style="color:#dc2626;">*</span></label>
+              <input id="f-name" type="text" required placeholder="เช่น High Season ปีใหม่"
+                style="width:100%;padding:10px 14px;border:1px solid #d1d5db;border-radius:9px;font-family:Prompt,sans-serif;font-size:14px;outline:none;">
+            </div>
+            <div>
+              <label style="font-size:13px;font-weight:600;color:#374151;display:block;margin-bottom:8px;">เป้าหมาย <span style="color:#dc2626;">*</span></label>
+              <div style="display:flex;gap:8px;">
+                <button type="button" id="btn-season-room" onclick="setSeasonTargetType('ROOM')"
+                  style="flex:1;padding:8px;border-radius:9px;border:2px solid #2563eb;background:#eff6ff;color:#2563eb;font-family:Prompt,sans-serif;font-size:13px;font-weight:600;cursor:pointer;">ที่พัก</button>
+                <button type="button" id="btn-season-tour" onclick="setSeasonTargetType('TOUR')"
+                  style="flex:1;padding:8px;border-radius:9px;border:2px solid #e2e8f0;background:#fff;color:#64748b;font-family:Prompt,sans-serif;font-size:13px;font-weight:600;cursor:pointer;">ทัวร์</button>
+              </div>
+              <input type="hidden" id="f-target-type" value="ROOM">
+            </div>
+            <div>
+              <label style="font-size:13px;font-weight:600;color:#374151;display:block;margin-bottom:6px;">เลือกรายการ <span style="color:#dc2626;">*</span></label>
+              <select id="f-target-id" required style="width:100%;padding:10px 14px;border:1px solid #d1d5db;border-radius:9px;font-family:Prompt,sans-serif;font-size:14px;outline:none;background:#fff;">
+                <option value="">— เลือก —</option>
+              </select>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+              <div>
+                <label style="font-size:13px;font-weight:600;color:#374151;display:block;margin-bottom:6px;">วันเริ่มต้น <span style="color:#dc2626;">*</span></label>
+                <input id="f-start-date" type="date" required
+                  style="width:100%;padding:10px 14px;border:1px solid #d1d5db;border-radius:9px;font-family:Prompt,sans-serif;font-size:14px;outline:none;">
+              </div>
+              <div>
+                <label style="font-size:13px;font-weight:600;color:#374151;display:block;margin-bottom:6px;">วันสิ้นสุด <span style="color:#dc2626;">*</span></label>
+                <input id="f-end-date" type="date" required
+                  style="width:100%;padding:10px 14px;border:1px solid #d1d5db;border-radius:9px;font-family:Prompt,sans-serif;font-size:14px;outline:none;">
+              </div>
+            </div>
+            <div>
+              <label style="font-size:13px;font-weight:600;color:#374151;display:block;margin-bottom:6px;">ตัวคูณ <span style="color:#dc2626;">*</span></label>
+              <input id="f-multiplier" type="number" min="0" step="0.1" value="1.5" required placeholder="1.5"
+                style="width:100%;padding:10px 14px;border:1px solid #d1d5db;border-radius:9px;font-family:Prompt,sans-serif;font-size:14px;outline:none;">
+              <div style="font-size:12px;color:#94a3b8;margin-top:4px;">เช่น 1.5 = ราคาปกติ × 1.5</div>
+            </div>
+            <div>
+              <label style="font-size:13px;font-weight:600;color:#374151;display:block;margin-bottom:6px;">ราคาตายตัว (บาท)</label>
+              <input id="f-absolute-price" type="number" min="0" step="0.01" placeholder="ถ้ามีค่า จะใช้แทนตัวคูณ"
+                style="width:100%;padding:10px 14px;border:1px solid #d1d5db;border-radius:9px;font-family:Prompt,sans-serif;font-size:14px;outline:none;">
+              <div style="font-size:12px;color:#94a3b8;margin-top:4px;">ถ้ามีค่า จะใช้แทนตัวคูณ</div>
+            </div>
+            <button type="submit" style="width:100%;padding:12px;border-radius:10px;border:none;background:#2563eb;color:#fff;font-family:Prompt,sans-serif;font-size:14px;font-weight:600;cursor:pointer;margin-top:4px;">
+              <i class="fa-solid fa-plus"></i> บันทึกช่วงราคา
+            </button>
+          </form>
+        </div>
+
+        <!-- RIGHT: Table -->
+        <div>
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+            <h1 style="font-size:20px;font-weight:700;color:#1e293b;">ราคา High Season</h1>
+            <div id="season-count" style="font-size:13px;color:#64748b;"></div>
+          </div>
+          <div style="background:#fff;border:1px solid #e2e8f0;border-radius:16px;overflow:hidden;">
+            <div style="overflow-x:auto;">
+              <table style="width:100%;border-collapse:collapse;min-width:500px;">
+                <thead>
+                  <tr style="background:#f8fafc;border-bottom:1px solid #e2e8f0;">
+                    <th style="padding:12px 16px;text-align:left;font-size:12px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:.04em;">ช่วง</th>
+                    <th style="padding:12px 16px;text-align:left;font-size:12px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:.04em;">เป้าหมาย</th>
+                    <th style="padding:12px 16px;text-align:left;font-size:12px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:.04em;">วันที่</th>
+                    <th style="padding:12px 16px;text-align:left;font-size:12px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:.04em;">ราคา</th>
+                    <th style="padding:12px 16px;text-align:left;font-size:12px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:.04em;"></th>
+                  </tr>
+                </thead>
+                <tbody id="seasons-tbody">
+                  <tr><td colspan="5" style="text-align:center;padding:48px;">
+                    <i class="fa-solid fa-circle-notch fa-spin" style="font-size:22px;color:#2563eb;"></i>
+                  </td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+
+    // Responsive: stack on mobile
+    function applyLayout() {
+      const grid = content.querySelector('[style*="grid-template-columns:1fr 2fr"]');
+      if (!grid) return;
+      grid.style.gridTemplateColumns = window.innerWidth < 900 ? '1fr' : '1fr 2fr';
+    }
+    applyLayout();
+    window.addEventListener('resize', applyLayout);
+  }
+
+  window.submitSeason = async function (e) {
+    e.preventDefault();
+    const btn = e.target.querySelector('[type=submit]');
+    btn.disabled = true;
+    const name = document.getElementById('f-name').value.trim();
+    const targetType = document.getElementById('f-target-type').value;
+    const targetId = parseInt(document.getElementById('f-target-id').value);
+    const startDate = document.getElementById('f-start-date').value;
+    const endDate = document.getElementById('f-end-date').value;
+    const multiplier = parseFloat(document.getElementById('f-multiplier').value);
+    const absolutePrice = document.getElementById('f-absolute-price').value ? parseFloat(document.getElementById('f-absolute-price').value) : undefined;
+
+    const body = { name, startDate, endDate, multiplier };
+    if (targetType === 'ROOM') body.roomId = targetId;
+    else body.tourId = targetId;
+    if (absolutePrice !== undefined) body.absolutePrice = absolutePrice;
+
+    try {
+      await adminPost('/api/seasons', body);
+      showToast('บันทึกช่วงราคาสำเร็จ');
+      document.getElementById('season-form').reset();
+      document.getElementById('f-multiplier').value = '1.5';
+      setTargetType('ROOM');
+      await loadSeasons();
+    } catch (err) {
+      showToast(err.message || 'เกิดข้อผิดพลาด', 'error');
+    } finally {
+      btn.disabled = false;
+    }
+  };
+
+  window.deleteSeason = async function (id) {
+    const s = seasons.find(x => x.id === id);
+    if (!confirm(`ลบช่วง "${s?.name}" ใช่หรือไม่?`)) return;
+    try {
+      await adminDelete('/api/seasons/' + id);
+      showToast('ลบช่วงราคาสำเร็จ');
+      await loadSeasons();
+    } catch (err) {
+      showToast(err.message || 'เกิดข้อผิดพลาด', 'error');
+    }
+  };
+
+  async function loadSeasons() {
+    try {
+      seasons = await adminGet('/api/seasons');
+    } catch (e) {
+      seasons = [];
+    }
+    const cnt = document.getElementById('season-count');
+    if (cnt) cnt.textContent = seasons.length + ' ช่วง';
+    renderTable();
+  }
+
+  buildPage();
+  const [r, t] = await Promise.all([
+    adminGet('/api/rooms/admin/list').catch(() => []),
+    adminGet('/api/tours/admin/list').catch(() => []),
+  ]);
+  rooms = r; tours = t;
+  setTargetType('ROOM');
+  await loadSeasons();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>JongJongDi - รายละเอียดการจอง</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script src="_lib.js"></script>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0;}
+    body{font-family:'Prompt',sans-serif;color:#334155;background:#f8fafc;-webkit-font-smoothing:antialiased;}
+    a{text-decoration:none;}
+    .section-card{background:#fff;border-radius:16px;border:1px solid #f1f5f9;box-shadow:0 1px 6px rgba(0,0,0,.05);padding:24px;margin-bottom:16px;}
+    .row{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid #f8fafc;font-size:13px;}
+    .row:last-child{border-bottom:none;}
+    .row-label{color:#64748b;}
+    .row-value{font-weight:600;color:#334155;text-align:right;}
+    @media(max-width:768px){#nav-links{display:none!important;}}
+  </style>
+</head>
+<body>
+
+<div style="padding-top:80px;min-height:100vh;">
+  <div style="max-width:680px;margin:0 auto;padding:32px 16px 64px;" id="detail-root">
+    <div style="text-align:center;padding:80px 0;color:#94a3b8;">
+      <i class="fa-solid fa-circle-notch fa-spin" style="font-size:32px;"></i>
+    </div>
+  </div>
+</div>
+
+<script>
+const lang = getLang();
+const bookingNum = getQP('num');
+
+const PAYMENT_METHOD_LABEL = {
+  BANK_TRANSFER: 'โอนธนาคาร',
+  PROMPTPAY:     'PromptPay',
+  CREDIT_CARD:   'บัตรเครดิต',
+  ALIPAY:        'Alipay',
+  WECHAT_PAY:    'WeChat Pay',
+};
+
+const PAYMENT_STATUS_LABEL = {
+  PENDING:   'รอดำเนินการ',
+  COMPLETED: 'สำเร็จ',
+  FAILED:    'ล้มเหลว',
+  REFUNDED:  'คืนเงินแล้ว',
+};
+
+function render404() {
+  document.getElementById('detail-root').innerHTML = `
+    <div style="text-align:center;padding:64px 24px;background:#fff;border-radius:20px;border:1px solid #f1f5f9;box-shadow:0 1px 6px rgba(0,0,0,.05);">
+      <div style="width:72px;height:72px;background:#fef2f2;border-radius:50%;margin:0 auto 20px;display:flex;align-items:center;justify-content:center;">
+        <i class="fa-solid fa-triangle-exclamation" style="font-size:30px;color:#ef4444;"></i>
+      </div>
+      <h2 style="font-weight:700;font-size:20px;color:#1e293b;margin-bottom:8px;">${pick('ไม่พบการจอง', 'Booking not found', lang)}</h2>
+      <p style="font-size:14px;color:#64748b;margin-bottom:28px;">${pick('หมายเลขการจองไม่ถูกต้อง หรือยังไม่มีข้อมูล', 'The booking number is invalid or not yet available.', lang)}</p>
+      <a href="track.html" style="display:inline-flex;align-items:center;gap:8px;padding:10px 24px;background:#2563eb;color:#fff;border-radius:10px;font-weight:600;font-size:14px;">
+        <i class="fa-solid fa-magnifying-glass"></i>${pick('ค้นหาการจองอีกครั้ง', 'Search again', lang)}
+      </a>
+    </div>`;
+}
+
+function renderDetail(b) {
+  const isRoom = b.type === 'ACCOMMODATION' || b.checkIn;
+  const imgUrl = mainImageUrl(isRoom ? (b.room?.images || []) : (b.tour?.images || []));
+
+  let itemName = '—';
+  let dateSection = '';
+  if (isRoom) {
+    const roomName = pick(b.room?.nameTh, b.room?.nameEn, lang) || b.room?.name || b.roomSlug || '';
+    const typeName = pick(b.roomType?.nameTh, b.roomType?.nameEn, lang) || b.roomType?.name || '';
+    itemName = [roomName, typeName].filter(Boolean).join(' · ');
+    dateSection = `
+      <div class="row"><span class="row-label">${pick('เช็คอิน', 'Check-in', lang)}</span><span class="row-value">${fmtDate(b.checkIn)}</span></div>
+      <div class="row"><span class="row-label">${pick('เช็คเอาท์', 'Check-out', lang)}</span><span class="row-value">${fmtDate(b.checkOut)}</span></div>`;
+  } else {
+    itemName = pick(b.tour?.nameTh, b.tour?.nameEn, lang) || b.tour?.name || b.tourSlug || '';
+    const dep = b.schedule?.departureDate || b.departureDate;
+    const depTime = b.schedule?.departureTime || b.departureTime;
+    dateSection = `
+      ${dep ? `<div class="row"><span class="row-label">${pick('วันเดินทาง', 'Departure', lang)}</span><span class="row-value">${fmtDate(dep)}</span></div>` : ''}
+      ${depTime ? `<div class="row"><span class="row-label">${pick('เวลาออกเดินทาง', 'Departure time', lang)}</span><span class="row-value">${depTime}</span></div>` : ''}`;
+  }
+
+  // Payments
+  const payments = b.payments || [];
+  const paymentSection = payments.length ? `
+    <div class="section-card">
+      <h3 style="font-weight:700;font-size:15px;color:#1e293b;margin-bottom:16px;display:flex;align-items:center;gap:8px;">
+        <i class="fa-solid fa-credit-card" style="color:#2563eb;"></i>${pick('ข้อมูลการชำระเงิน', 'Payment Info', lang)}
+      </h3>
+      ${payments.map(p => `
+        <div class="row"><span class="row-label">${pick('วิธีชำระ', 'Method', lang)}</span><span class="row-value">${PAYMENT_METHOD_LABEL[p.method] || p.method}</span></div>
+        <div class="row"><span class="row-label">${pick('สถานะ', 'Status', lang)}</span><span class="row-value">${PAYMENT_STATUS_LABEL[p.status] || p.status}</span></div>
+        <div class="row"><span class="row-label">${pick('จำนวนเงิน', 'Amount', lang)}</span><span class="row-value" style="color:#f59e0b;font-size:15px;">${Number(p.amount).toLocaleString()}.-</span></div>
+      `).join('')}
+    </div>` : '';
+
+  document.getElementById('detail-root').innerHTML = `
+    <!-- Header -->
+    <div class="section-card" style="background:linear-gradient(135deg,#eff6ff,#f0fdf4);">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:12px;">
+        <div>
+          <div style="font-size:12px;font-weight:700;color:#94a3b8;letter-spacing:.08em;margin-bottom:4px;">
+            <i class="fa-solid fa-hashtag"></i> ${pick('หมายเลขการจอง', 'Booking No.', lang)}
+          </div>
+          <div style="font-size:22px;font-weight:700;color:#1e293b;letter-spacing:.03em;">${b.bookingNumber}</div>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;">
+          ${statusBadge(b.status)}
+          <span style="font-size:11px;color:#94a3b8;">${fmtDate(b.createdAt)}</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Item -->
+    <div class="section-card" style="padding:0;overflow:hidden;">
+      <div style="height:180px;background:linear-gradient(135deg,#bfdbfe,#a5f3fc);position:relative;overflow:hidden;">
+        ${imgUrl
+          ? `<img src="${imgUrl}" alt="${itemName}" style="width:100%;height:100%;object-fit:cover;">`
+          : `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;"><i class="fa-solid ${isRoom ? 'fa-bed' : 'fa-water-ladder'}" style="font-size:56px;color:#bfdbfe;opacity:.5;"></i></div>`}
+        <div style="position:absolute;inset:0;background:linear-gradient(to top,rgba(0,0,0,.5),transparent 60%);"></div>
+        <div style="position:absolute;bottom:14px;left:16px;right:16px;">
+          <div style="font-weight:700;font-size:16px;color:#fff;line-height:1.3;">${itemName}</div>
+        </div>
+      </div>
+      <div style="padding:16px 20px;">
+        <h3 style="font-weight:700;font-size:15px;color:#1e293b;margin-bottom:12px;display:flex;align-items:center;gap:8px;">
+          <i class="fa-regular fa-calendar" style="color:#2563eb;"></i>${pick('รายละเอียดการจอง', 'Booking Details', lang)}
+        </h3>
+        ${dateSection}
+        <div class="row"><span class="row-label">${pick('จำนวนผู้เข้าพัก/เดินทาง', 'Guests', lang)}</span><span class="row-value">${b.numGuests || 1} ${tx(t.booking.guests, lang)}</span></div>
+      </div>
+    </div>
+
+    <!-- Total price -->
+    ${b.totalAmount ? `
+    <div class="section-card" style="background:linear-gradient(135deg,#fffbeb,#fef3c7);">
+      <div style="display:flex;align-items:center;justify-content:space-between;">
+        <span style="font-weight:700;font-size:15px;color:#92400e;">${pick('ยอดรวมทั้งหมด', 'Total Amount', lang)}</span>
+        <span style="font-weight:700;font-size:26px;color:#f59e0b;">${Number(b.totalAmount).toLocaleString()}.-</span>
+      </div>
+    </div>` : ''}
+
+    <!-- Payment -->
+    ${paymentSection}
+
+    <!-- Customer info -->
+    <div class="section-card">
+      <h3 style="font-weight:700;font-size:15px;color:#1e293b;margin-bottom:16px;display:flex;align-items:center;gap:8px;">
+        <i class="fa-solid fa-user" style="color:#2563eb;"></i>${pick('ข้อมูลผู้จอง', 'Guest Information', lang)}
+      </h3>
+      <div class="row"><span class="row-label">${tx(t.booking.fullName, lang)}</span><span class="row-value">${b.guestName || '—'}</span></div>
+      <div class="row"><span class="row-label">${tx(t.booking.phone, lang)}</span><span class="row-value">${b.guestPhone || '—'}</span></div>
+      ${b.guestEmail ? `<div class="row"><span class="row-label">${tx(t.booking.email, lang)}</span><span class="row-value">${b.guestEmail}</span></div>` : ''}
+    </div>
+
+    <!-- Contact / Help -->
+    <div class="section-card" style="background:#f8fafc;border-style:dashed;">
+      <div style="display:flex;align-items:center;gap:14px;">
+        <div style="width:44px;height:44px;background:#eff6ff;border-radius:12px;flex-shrink:0;display:flex;align-items:center;justify-content:center;">
+          <i class="fa-solid fa-headset" style="color:#2563eb;font-size:18px;"></i>
+        </div>
+        <div>
+          <div style="font-weight:700;font-size:14px;color:#1e293b;margin-bottom:2px;">${pick('มีปัญหา? ติดต่อเรา', 'Need help? Contact us', lang)}</div>
+          <div style="font-size:13px;color:#64748b;display:flex;align-items:center;gap:6px;">
+            <i class="fa-solid fa-phone" style="color:#2563eb;font-size:11px;"></i>
+            <a href="tel:0802256669" style="color:#2563eb;font-weight:600;">080-225-6669</a>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Back link -->
+    <div style="text-align:center;padding-top:8px;">
+      <a href="track.html" style="display:inline-flex;align-items:center;gap:8px;font-size:14px;color:#64748b;font-weight:500;" onmouseover="this.style.color='#2563eb'" onmouseout="this.style.color='#64748b'">
+        <i class="fa-solid fa-arrow-left"></i>${pick('กลับไปค้นหาการจอง', 'Back to booking search', lang)}
+      </a>
+    </div>`;
+}
+
+async function loadBooking() {
+  if (!bookingNum) { render404(); return; }
+
+  let booking = null;
+
+  // Try public endpoint first
+  booking = await apiGet(`/api/bookings/${bookingNum}`);
+
+  // If no result, try track endpoint (some APIs return booking by number via track)
+  if (!booking) {
+    try {
+      const res = await fetch(`${API}/api/bookings/num/${bookingNum}`);
+      if (res.ok) booking = await res.json();
+    } catch {}
+  }
+
+  if (!booking) {
+    render404();
+  } else {
+    renderDetail(booking);
+  }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  initPage({ base: '' });
+  loadBooking();
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ที่พัก – JongJongDi Admin</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script src="_lib.js"></script>
+  <style>
+    * { box-sizing: border-box; }
+    body { font-family: Prompt, sans-serif; }
+    input, textarea, select, button { font-family: Prompt, sans-serif; }
+    .btn { cursor: pointer; border: none; border-radius: 8px; font-size: 13px; font-weight: 600; padding: 7px 14px; transition: opacity .15s; }
+    .btn:hover { opacity: .85; }
+    .btn-blue { background: #2563eb; color: #fff; }
+    .btn-blue-outline { background: #fff; color: #2563eb; border: 1px solid #2563eb; }
+    .btn-gray { background: #f1f5f9; color: #475569; border: 1px solid #e2e8f0; }
+    .btn-red { background: #fee2e2; color: #dc2626; border: 1px solid #fca5a5; }
+    .form-label { display: block; font-size: 13px; font-weight: 600; color: #374151; margin-bottom: 4px; }
+    .form-input { width: 100%; border: 1px solid #d1d5db; border-radius: 8px; padding: 8px 12px; font-size: 14px; color: #1e293b; outline: none; transition: border-color .15s; font-family: Prompt, sans-serif; }
+    .form-input:focus { border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37,99,235,.1); }
+    .modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,.5); z-index: 50; display: flex; align-items: center; justify-content: center; padding: 16px; }
+    .modal-box { background: #fff; border-radius: 16px; box-shadow: 0 20px 60px rgba(0,0,0,.25); width: 100%; max-width: 720px; max-height: 90vh; overflow-y: auto; }
+    .modal-header { display: flex; align-items: center; justify-content: space-between; padding: 20px 24px 16px; border-bottom: 1px solid #f1f5f9; position: sticky; top: 0; background: #fff; z-index: 1; border-radius: 16px 16px 0 0; }
+    .modal-body { padding: 24px; }
+    .modal-footer { padding: 16px 24px; border-top: 1px solid #f1f5f9; display: flex; justify-content: flex-end; gap: 10px; }
+    .type-row { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr 1fr auto; gap: 8px; align-items: end; margin-bottom: 10px; }
+    .pill-blue { display: inline-block; background: #eff6ff; color: #2563eb; border: 1px solid #bfdbfe; border-radius: 999px; font-size: 12px; font-weight: 500; padding: 3px 10px; margin: 2px; }
+  </style>
+</head>
+<body>
+<script>
+// ──────────────────────────────────────────────────────────────
+// State
+// ──────────────────────────────────────────────────────────────
+var _rooms = [];
+var _editingRoom = null; // null = new, object = editing
+var _imgRoom = null;     // room being managed in ImageManager
+var _imgImages = [];     // current image list in ImageManager
+
+// ──────────────────────────────────────────────────────────────
+// Boot
+// ──────────────────────────────────────────────────────────────
+(function () {
+  var shell = renderAdminShell({ activePage: 'rooms.html' });
+  if (!shell) return;
+  loadRooms();
+})();
+
+// ──────────────────────────────────────────────────────────────
+// Data
+// ──────────────────────────────────────────────────────────────
+async function loadRooms() {
+  var pc = document.getElementById('page-content');
+  pc.insertAdjacentHTML('beforeend', '<div id="rooms-loading" style="text-align:center;padding:40px;color:#94a3b8"><i class="fa-solid fa-circle-notch fa-spin" style="font-size:24px"></i></div>');
+  try {
+    _rooms = await adminGet('/api/rooms/admin/list');
+  } catch (e) {
+    _rooms = [];
+    showToast('โหลดข้อมูลไม่ได้: ' + e.message, 'error');
+  }
+  document.getElementById('rooms-loading')?.remove();
+  renderPage();
+}
+
+// ──────────────────────────────────────────────────────────────
+// Render
+// ──────────────────────────────────────────────────────────────
+function renderPage() {
+  var pc = document.getElementById('page-content');
+  // Clear previous page content (keep any banner injected by shell)
+  var existing = document.getElementById('rooms-root');
+  if (existing) existing.remove();
+
+  var totalRooms = _rooms.length;
+  var totalUnits = _rooms.reduce(function (a, r) {
+    return a + (r.types || []).reduce(function (b, t) { return b + (t.quantity || 0); }, 0);
+  }, 0);
+  var activeCount = _rooms.filter(function (r) { return r.isActive; }).length;
+
+  var html = '<div id="rooms-root">';
+
+  // Header
+  html += '<div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:24px">' +
+    '<div>' +
+      '<h1 style="margin:0 0 4px;font-size:22px;font-weight:700;color:#0f172a">ที่พัก</h1>' +
+      '<p style="margin:0;font-size:13px;color:#64748b">' + totalRooms + ' ที่พัก · ' + totalUnits + ' ห้องรวม · เปิดรับจอง ' + activeCount + '</p>' +
+    '</div>' +
+    '<button class="btn btn-blue" onclick="openRoomForm(null)">' +
+      '<i class="fa-solid fa-plus" style="margin-right:6px"></i>เพิ่มที่พัก' +
+    '</button>' +
+  '</div>';
+
+  if (_rooms.length === 0) {
+    html += '<div style="text-align:center;padding:60px 20px;background:#fff;border-radius:16px;border:1px solid #f1f5f9">' +
+      '<i class="fa-solid fa-bed" style="font-size:48px;color:#cbd5e1;margin-bottom:16px;display:block"></i>' +
+      '<p style="color:#94a3b8;font-size:15px;margin:0 0 16px">ยังไม่มีที่พัก</p>' +
+      '<button class="btn btn-blue" onclick="openRoomForm(null)">เพิ่มที่พักแรก</button>' +
+    '</div>';
+  } else {
+    html += '<div style="background:#fff;border-radius:16px;border:1px solid #f1f5f9;overflow:hidden">';
+    _rooms.forEach(function (room, idx) {
+      var types = room.types || [];
+      var prices = types.map(function (t) { return t.pricePerNight; });
+      var minP = prices.length ? Math.min.apply(null, prices) : 0;
+      var maxP = prices.length ? Math.max.apply(null, prices) : 0;
+      var totalQ = types.reduce(function (a, t) { return a + (t.quantity || 0); }, 0);
+      var imgCount = (room.images || []).length;
+      var bookings = (room._count && room._count.bookings) || 0;
+      var mainImg = (room.images || []).find(function (i) { return i.isMain; }) || (room.images || [])[0];
+      var imgUrl = mainImg ? mainImg.url : '';
+      var priceStr = prices.length ? (minP === maxP ? '฿' + fmt(minP) : '฿' + fmt(minP) + '–' + fmt(maxP)) : '—';
+      var borderTop = idx > 0 ? 'border-top:1px solid #f1f5f9;' : '';
+
+      html += '<div style="' + borderTop + 'padding:16px 20px;display:flex;align-items:flex-start;gap:16px;flex-wrap:wrap">' +
+
+        // Thumbnail
+        '<div style="width:128px;height:96px;border-radius:10px;overflow:hidden;flex-shrink:0;background:linear-gradient(135deg,#dbeafe,#bfdbfe);display:flex;align-items:center;justify-content:center">' +
+          (imgUrl ? '<img src="' + imgUrl + '" alt="" style="width:100%;height:100%;object-fit:cover">' :
+            '<i class="fa-solid fa-bed" style="font-size:28px;color:#93c5fd"></i>') +
+        '</div>' +
+
+        // Info
+        '<div style="flex:1;min-width:0">' +
+          '<div style="font-size:15px;font-weight:700;color:#0f172a;margin-bottom:2px">' + escH(room.nameTh) + '</div>' +
+          '<div style="font-size:12px;color:#94a3b8;margin-bottom:8px">' + escH(room.nameEn) + ' · /' + escH(room.slug) + '</div>' +
+          '<div style="font-size:12px;color:#64748b;display:flex;flex-wrap:wrap;gap:12px;margin-bottom:8px">' +
+            '<span>' + priceStr + '/คืน</span>' +
+            '<span>' + types.length + ' ประเภท · ' + totalQ + ' ห้องรวม</span>' +
+            '<span>' + imgCount + ' รูป</span>' +
+            '<span>' + bookings + ' จอง</span>' +
+          '</div>' +
+          '<div style="display:flex;flex-wrap:wrap;gap:4px">' +
+            types.map(function (tp) {
+              return '<span class="pill-blue">' + escH(tp.nameTh) + ' (' + (tp.maxGuests || 0) + ' คน · ' + (tp.quantity || 0) + ' ห้อง · ฿' + fmt(tp.pricePerNight) + ')</span>';
+            }).join('') +
+          '</div>' +
+        '</div>' +
+
+        // Actions
+        '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:8px;flex-shrink:0">' +
+          '<span style="' + (room.isActive ? 'background:#dcfce7;color:#15803d' : 'background:#f1f5f9;color:#64748b') + ';border-radius:999px;font-size:12px;font-weight:600;padding:3px 12px;margin-bottom:4px">' +
+            (room.isActive ? 'เปิด' : 'ปิด') +
+          '</span>' +
+          '<div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end">' +
+            '<button class="btn btn-blue" onclick="openRoomForm(\'' + room.id + '\')"><i class="fa-solid fa-pen" style="margin-right:4px"></i>แก้ไข</button>' +
+            '<button class="btn btn-blue-outline" onclick="openImageManager(\'' + room.id + '\',\'rooms\')"><i class="fa-solid fa-image" style="margin-right:4px"></i>รูปภาพ</button>' +
+            '<button class="btn btn-gray" onclick="toggleRoomActive(\'' + room.id + '\',' + room.isActive + ')">' +
+              (room.isActive ? '<i class="fa-solid fa-eye-slash" style="margin-right:4px"></i>ปิดรับจอง' : '<i class="fa-solid fa-eye" style="margin-right:4px"></i>เปิดรับจอง') +
+            '</button>' +
+          '</div>' +
+        '</div>' +
+      '</div>';
+    });
+    html += '</div>';
+  }
+
+  html += '</div>'; // rooms-root
+  html += roomFormModalHtml();
+  html += imageManagerHtml();
+
+  pc.insertAdjacentHTML('beforeend', html);
+}
+
+// ──────────────────────────────────────────────────────────────
+// Room Form Modal
+// ──────────────────────────────────────────────────────────────
+function roomFormModalHtml() {
+  return '<div id="room-form-modal" style="display:none" class="modal-backdrop" onclick="if(event.target===this)closeRoomForm()">' +
+    '<div class="modal-box">' +
+      '<div class="modal-header">' +
+        '<h2 id="room-form-title" style="margin:0;font-size:17px;font-weight:700;color:#0f172a">เพิ่มที่พัก</h2>' +
+        '<button class="btn btn-gray" onclick="closeRoomForm()" style="padding:6px 10px"><i class="fa-solid fa-xmark"></i></button>' +
+      '</div>' +
+      '<div class="modal-body">' +
+        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">' +
+          '<div>' +
+            '<label class="form-label">Slug <span style="color:#dc2626">*</span></label>' +
+            '<input id="rf-slug" class="form-input" placeholder="เช่น beach-resort">' +
+          '</div>' +
+          '<div></div>' +
+          '<div>' +
+            '<label class="form-label">ชื่อ (ไทย) <span style="color:#dc2626">*</span></label>' +
+            '<input id="rf-nameTh" class="form-input" placeholder="ชื่อที่พักภาษาไทย">' +
+          '</div>' +
+          '<div>' +
+            '<label class="form-label">ชื่อ (อังกฤษ)</label>' +
+            '<input id="rf-nameEn" class="form-input" placeholder="Room name in English">' +
+          '</div>' +
+          '<div>' +
+            '<label class="form-label">คำอธิบาย (ไทย)</label>' +
+            '<textarea id="rf-descTh" class="form-input" rows="3" placeholder="รายละเอียดที่พักภาษาไทย"></textarea>' +
+          '</div>' +
+          '<div>' +
+            '<label class="form-label">คำอธิบาย (อังกฤษ)</label>' +
+            '<textarea id="rf-descEn" class="form-input" rows="3" placeholder="Description in English"></textarea>' +
+          '</div>' +
+        '</div>' +
+
+        '<div style="border-top:1px solid #f1f5f9;padding-top:16px">' +
+          '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">' +
+            '<h3 style="margin:0;font-size:14px;font-weight:700;color:#374151"><i class="fa-solid fa-layer-group" style="margin-right:6px;color:#2563eb"></i>ประเภทห้อง</h3>' +
+            '<button class="btn btn-blue-outline" onclick="addTypeRow()" style="font-size:12px;padding:5px 12px"><i class="fa-solid fa-plus" style="margin-right:4px"></i>เพิ่มประเภทห้อง</button>' +
+          '</div>' +
+          '<div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr 1fr 32px;gap:6px;margin-bottom:6px">' +
+            '<span style="font-size:11px;color:#94a3b8;font-weight:600">ชื่อ (ไทย)</span>' +
+            '<span style="font-size:11px;color:#94a3b8;font-weight:600">ชื่อ (อังกฤษ)</span>' +
+            '<span style="font-size:11px;color:#94a3b8;font-weight:600">ราคา/คืน</span>' +
+            '<span style="font-size:11px;color:#94a3b8;font-weight:600">จำนวนห้อง</span>' +
+            '<span style="font-size:11px;color:#94a3b8;font-weight:600">ผู้เข้าพักสูงสุด</span>' +
+            '<span></span>' +
+          '</div>' +
+          '<div id="rf-types"></div>' +
+        '</div>' +
+      '</div>' +
+      '<div class="modal-footer">' +
+        '<button class="btn btn-gray" onclick="closeRoomForm()">ยกเลิก</button>' +
+        '<button class="btn btn-blue" id="rf-save-btn" onclick="saveRoom()"><i class="fa-solid fa-floppy-disk" style="margin-right:6px"></i>บันทึก</button>' +
+      '</div>' +
+    '</div>' +
+  '</div>';
+}
+
+function openRoomForm(roomId) {
+  _editingRoom = null;
+  var titleEl = document.getElementById('room-form-title');
+  if (roomId) {
+    _editingRoom = _rooms.find(function (r) { return r.id === roomId; });
+    titleEl.textContent = 'แก้ไขที่พัก';
+  } else {
+    titleEl.textContent = 'เพิ่มที่พัก';
+  }
+
+  var r = _editingRoom;
+  document.getElementById('rf-slug').value = r ? r.slug : '';
+  document.getElementById('rf-nameTh').value = r ? r.nameTh : '';
+  document.getElementById('rf-nameEn').value = r ? r.nameEn || '' : '';
+  document.getElementById('rf-descTh').value = r ? r.descriptionTh || '' : '';
+  document.getElementById('rf-descEn').value = r ? r.descriptionEn || '' : '';
+
+  var typesEl = document.getElementById('rf-types');
+  typesEl.innerHTML = '';
+  var types = r ? (r.types || []) : [];
+  if (types.length === 0) {
+    addTypeRow();
+  } else {
+    types.forEach(function (tp) { addTypeRow(tp); });
+  }
+
+  document.getElementById('room-form-modal').style.display = 'flex';
+  document.body.style.overflow = 'hidden';
+}
+
+function closeRoomForm() {
+  document.getElementById('room-form-modal').style.display = 'none';
+  document.body.style.overflow = '';
+}
+
+function addTypeRow(tp) {
+  tp = tp || {};
+  var row = document.createElement('div');
+  row.className = 'type-row';
+  row.innerHTML =
+    '<input class="form-input tp-nameTh" placeholder="Standard" value="' + escH(tp.nameTh || '') + '">' +
+    '<input class="form-input tp-nameEn" placeholder="Standard" value="' + escH(tp.nameEn || '') + '">' +
+    '<input class="form-input tp-price" type="number" min="0" placeholder="1500" value="' + (tp.pricePerNight || '') + '">' +
+    '<input class="form-input tp-qty" type="number" min="1" placeholder="5" value="' + (tp.quantity || '') + '">' +
+    '<input class="form-input tp-guests" type="number" min="1" placeholder="2" value="' + (tp.maxGuests || '') + '">' +
+    '<button onclick="this.closest(\'.type-row\').remove()" style="background:#fee2e2;border:none;border-radius:6px;color:#dc2626;width:32px;height:36px;cursor:pointer;font-size:14px"><i class="fa-solid fa-xmark"></i></button>';
+  document.getElementById('rf-types').appendChild(row);
+}
+
+async function saveRoom() {
+  var btn = document.getElementById('rf-save-btn');
+  var slug = document.getElementById('rf-slug').value.trim();
+  var nameTh = document.getElementById('rf-nameTh').value.trim();
+  var nameEn = document.getElementById('rf-nameEn').value.trim();
+  var descriptionTh = document.getElementById('rf-descTh').value.trim();
+  var descriptionEn = document.getElementById('rf-descEn').value.trim();
+
+  if (!slug || !nameTh) { showToast('กรุณากรอก Slug และชื่อที่พัก', 'error'); return; }
+
+  var types = [];
+  document.querySelectorAll('#rf-types .type-row').forEach(function (row) {
+    var tN = row.querySelector('.tp-nameTh').value.trim();
+    var tE = row.querySelector('.tp-nameEn').value.trim();
+    var tP = parseFloat(row.querySelector('.tp-price').value) || 0;
+    var tQ = parseInt(row.querySelector('.tp-qty').value) || 0;
+    var tG = parseInt(row.querySelector('.tp-guests').value) || 0;
+    if (tN) types.push({ nameTh: tN, nameEn: tE, pricePerNight: tP, quantity: tQ, maxGuests: tG });
+  });
+
+  var body = { slug: slug, nameTh: nameTh, nameEn: nameEn, descriptionTh: descriptionTh, descriptionEn: descriptionEn, types: types };
+
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin" style="margin-right:6px"></i>กำลังบันทึก...';
+  try {
+    if (_editingRoom) {
+      await adminPatch('/api/rooms/' + _editingRoom.id, body);
+      showToast('อัปเดตที่พักสำเร็จ');
+    } else {
+      await adminPost('/api/rooms', body);
+      showToast('เพิ่มที่พักสำเร็จ');
+    }
+    closeRoomForm();
+    _rooms = [];
+    document.getElementById('rooms-root')?.remove();
+    loadRooms();
+  } catch (e) {
+    showToast(e.message, 'error');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fa-solid fa-floppy-disk" style="margin-right:6px"></i>บันทึก';
+  }
+}
+
+async function toggleRoomActive(roomId, currentActive) {
+  try {
+    await adminPatch('/api/rooms/' + roomId, { isActive: !currentActive });
+    showToast(currentActive ? 'ปิดรับจองแล้ว' : 'เปิดรับจองแล้ว');
+    var idx = _rooms.findIndex(function (r) { return r.id === roomId; });
+    if (idx !== -1) _rooms[idx].isActive = !currentActive;
+    document.getElementById('rooms-root')?.remove();
+    renderPage();
+  } catch (e) {
+    showToast(e.message, 'error');
+  }
+}
+
+// ──────────────────────────────────────────────────────────────
+// Image Manager
+// ──────────────────────────────────────────────────────────────
+function imageManagerHtml() {
+  return '<div id="img-manager-modal" style="display:none" class="modal-backdrop" onclick="if(event.target===this)closeImageManager()">' +
+    '<div class="modal-box" style="max-width:600px">' +
+      '<div class="modal-header">' +
+        '<div>' +
+          '<h2 style="margin:0 0 2px;font-size:17px;font-weight:700;color:#0f172a">จัดการรูปภาพ</h2>' +
+          '<p id="img-count-label" style="margin:0;font-size:12px;color:#94a3b8">0/10</p>' +
+        '</div>' +
+        '<button class="btn btn-gray" onclick="closeImageManager()" style="padding:6px 10px"><i class="fa-solid fa-xmark"></i></button>' +
+      '</div>' +
+      '<div class="modal-body">' +
+        '<div id="img-grid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px"></div>' +
+        '<div id="img-upload-area">' +
+          '<label style="display:flex;align-items:center;justify-content:center;gap:10px;padding:14px;border:2px dashed #d1d5db;border-radius:10px;cursor:pointer;color:#64748b;font-size:13px" onmouseover="this.style.borderColor=\'#2563eb\'" onmouseout="this.style.borderColor=\'#d1d5db\'">' +
+            '<i class="fa-solid fa-cloud-arrow-up" style="font-size:20px;color:#2563eb"></i>' +
+            '<span>อัปโหลดรูปภาพ (สูงสุด 10 รูป)</span>' +
+            '<input id="img-file-input" type="file" accept="image/*" multiple style="display:none" onchange="uploadImages(this.files)">' +
+          '</label>' +
+        '</div>' +
+      '</div>' +
+    '</div>' +
+  '</div>';
+}
+
+async function openImageManager(resourceId, resource) {
+  _imgRoom = { id: resourceId, resource: resource };
+  document.getElementById('img-manager-modal').style.display = 'flex';
+  document.body.style.overflow = 'hidden';
+  await loadImages();
+}
+
+function closeImageManager() {
+  document.getElementById('img-manager-modal').style.display = 'none';
+  document.body.style.overflow = '';
+  _imgRoom = null;
+  _imgImages = [];
+  // Refresh room list to update image counts
+  document.getElementById('rooms-root')?.remove();
+  loadRooms();
+}
+
+async function loadImages() {
+  var grid = document.getElementById('img-grid');
+  var label = document.getElementById('img-count-label');
+  grid.innerHTML = '<div style="grid-column:span 3;text-align:center;padding:24px;color:#94a3b8"><i class="fa-solid fa-circle-notch fa-spin"></i></div>';
+  try {
+    _imgImages = await adminGet('/api/' + _imgRoom.resource + '/' + _imgRoom.id + '/images');
+  } catch (e) {
+    _imgImages = [];
+  }
+  renderImageGrid();
+}
+
+function renderImageGrid() {
+  var grid = document.getElementById('img-grid');
+  var label = document.getElementById('img-count-label');
+  var count = _imgImages.length;
+  label.textContent = count + '/10';
+
+  var uploadArea = document.getElementById('img-upload-area');
+  uploadArea.style.display = count >= 10 ? 'none' : 'block';
+
+  if (count === 0) {
+    grid.innerHTML = '<div style="grid-column:span 3;text-align:center;padding:32px;color:#cbd5e1"><i class="fa-solid fa-images" style="font-size:36px;margin-bottom:8px;display:block"></i>ยังไม่มีรูปภาพ</div>';
+    return;
+  }
+
+  grid.innerHTML = _imgImages.map(function (img) {
+    return '<div style="position:relative;aspect-ratio:1;border-radius:10px;overflow:hidden;background:#f1f5f9">' +
+      '<img src="' + escH(img.url) + '" style="width:100%;height:100%;object-fit:cover">' +
+      (img.isMain ? '<span style="position:absolute;top:6px;left:6px;background:#f59e0b;color:#fff;font-size:10px;font-weight:700;padding:2px 8px;border-radius:999px"><i class="fa-solid fa-star" style="margin-right:3px"></i>หลัก</span>' : '') +
+      '<div class="img-hover-overlay" style="position:absolute;inset:0;background:rgba(0,0,0,0);transition:.2s;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px" onmouseover="this.style.background=\'rgba(0,0,0,0.55)\'" onmouseout="this.style.background=\'rgba(0,0,0,0)\'">' +
+        (!img.isMain ? '<button class="btn" onclick="setMainImage(\'' + img.id + '\')" style="background:#f59e0b;color:#fff;font-size:11px;padding:5px 10px;opacity:0;transition:.2s" onmouseover="this.style.opacity=\'1\'" onfocus="this.style.opacity=\'1\'" onblur="this.style.opacity=\'0\'">ตั้งเป็นหลัก</button>' : '') +
+        '<button class="btn" onclick="deleteImage(\'' + img.id + '\')" style="background:#ef4444;color:#fff;font-size:11px;padding:5px 10px;opacity:0;transition:.2s" onmouseover="this.style.opacity=\'1\'" onfocus="this.style.opacity=\'1\'" onblur="this.style.opacity=\'0\'">ลบ</button>' +
+      '</div>' +
+    '</div>';
+  }).join('');
+
+  // Re-attach hover so overlay buttons are visible on parent hover
+  grid.querySelectorAll('[style*="position:relative"]').forEach(function (cell) {
+    var overlay = cell.querySelector('.img-hover-overlay');
+    var btns = overlay ? overlay.querySelectorAll('button') : [];
+    cell.addEventListener('mouseenter', function () {
+      if (overlay) overlay.style.background = 'rgba(0,0,0,0.55)';
+      btns.forEach(function (b) { b.style.opacity = '1'; });
+    });
+    cell.addEventListener('mouseleave', function () {
+      if (overlay) overlay.style.background = 'rgba(0,0,0,0)';
+      btns.forEach(function (b) { b.style.opacity = '0'; });
+    });
+  });
+}
+
+async function uploadImages(files) {
+  if (!files || files.length === 0) return;
+  var remaining = 10 - _imgImages.length;
+  var toUpload = Array.from(files).slice(0, remaining);
+  var grid = document.getElementById('img-grid');
+
+  for (var i = 0; i < toUpload.length; i++) {
+    var fd = new FormData();
+    fd.append('file', toUpload[i]);
+    try {
+      var res = await fetch(API + '/api/' + _imgRoom.resource + '/' + _imgRoom.id + '/images', {
+        method: 'POST',
+        headers: adminBearerHeader(),
+        body: fd
+      });
+      if (!res.ok) throw new Error('อัปโหลดล้มเหลว');
+      showToast('อัปโหลดสำเร็จ ' + (i + 1) + '/' + toUpload.length);
+    } catch (e) {
+      showToast('อัปโหลดล้มเหลว: ' + e.message, 'error');
+    }
+  }
+  // Reset file input
+  document.getElementById('img-file-input').value = '';
+  await loadImages();
+}
+
+async function setMainImage(imageId) {
+  try {
+    await adminPatch('/api/' + _imgRoom.resource + '/images/' + imageId);
+    showToast('ตั้งเป็นรูปหลักแล้ว');
+    await loadImages();
+  } catch (e) {
+    showToast(e.message, 'error');
+  }
+}
+
+async function deleteImage(imageId) {
+  if (!confirm('ลบรูปภาพนี้?')) return;
+  try {
+    await adminDelete('/api/' + _imgRoom.resource + '/images/' + imageId);
+    showToast('ลบรูปภาพแล้ว');
+    await loadImages();
+  } catch (e) {
+    showToast(e.message, 'error');
+  }
+}
+
+// ──────────────────────────────────────────────────────────────
+// Utils
+// ──────────────────────────────────────────────────────────────
+function escH(s) {
+  return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+</script>
+</body>
+</html>

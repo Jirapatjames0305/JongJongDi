@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>JongJongDi - กรอกข้อมูลการจอง</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script src="_lib.js"></script>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0;}
+    body{font-family:'Prompt',sans-serif;color:#334155;background:#f8fafc;-webkit-font-smoothing:antialiased;}
+    a{text-decoration:none;}
+    .payment-radio{display:none;}
+    .payment-label{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border:2px solid #e2e8f0;border-radius:9999px;cursor:pointer;font-size:13px;font-weight:500;color:#64748b;transition:all .2s;background:#fff;}
+    .payment-radio:checked + .payment-label{border-color:#2563eb;background:#eff6ff;color:#2563eb;font-weight:600;}
+    .payment-label:hover{border-color:#93c5fd;background:#f8fafc;}
+    input[type="text"],input[type="tel"],input[type="email"]{width:100%;padding:10px 14px;border:1.5px solid #e2e8f0;border-radius:10px;font-family:'Prompt',sans-serif;font-size:14px;color:#334155;background:#fff;outline:none;transition:border-color .2s;}
+    input[type="text"]:focus,input[type="tel"]:focus,input[type="email"]:focus{border-color:#2563eb;box-shadow:0 0 0 3px rgba(37,99,235,.08);}
+    @media(max-width:768px){
+      #nav-links{display:none!important;}
+      #layout{flex-direction:column!important;}
+      #summary-col{width:100%!important;}
+      #form-col{width:100%!important;}
+    }
+  </style>
+</head>
+<body>
+
+<div style="padding-top:80px;min-height:100vh;">
+  <div style="max-width:900px;margin:0 auto;padding:32px 16px 64px;" id="page-root">
+    <div style="text-align:center;color:#94a3b8;padding:80px 0;">
+      <i class="fa-solid fa-circle-notch fa-spin" style="font-size:32px;"></i>
+    </div>
+  </div>
+</div>
+
+<script>
+const lang = getLang();
+const params = new URLSearchParams(location.search);
+const bookingType  = params.get('type') || 'ACCOMMODATION';
+const roomSlug     = params.get('roomSlug') || '';
+const roomTypeId   = params.get('roomTypeId') || '';
+const tourSlug     = params.get('tourSlug') || '';
+const scheduleId   = params.get('scheduleId') || '';
+const checkIn      = params.get('checkIn') || '';
+const checkOut     = params.get('checkOut') || '';
+const guestsParam  = parseInt(params.get('guests') || '1', 10);
+
+let itemData = null;
+let selectedRoomType = null;
+let selectedSchedule = null;
+
+function nights() {
+  if (!checkIn || !checkOut) return 0;
+  return Math.ceil((new Date(checkOut) - new Date(checkIn)) / 86400000);
+}
+
+function estimatedPrice() {
+  if (bookingType === 'ACCOMMODATION') {
+    return selectedRoomType ? selectedRoomType.pricePerNight * nights() : 0;
+  } else {
+    return itemData ? itemData.pricePerPerson * guestsParam : 0;
+  }
+}
+
+function badgeLabel() {
+  return bookingType === 'ACCOMMODATION'
+    ? pick('ที่พัก', 'Accommodation', lang)
+    : pick('ทัวร์', 'Tour', lang);
+}
+
+function renderSummary() {
+  const imgUrl = mainImageUrl(itemData?.images);
+  const itemName = bookingType === 'ACCOMMODATION'
+    ? pick(itemData?.nameTh, itemData?.nameEn, lang)
+    : pick(itemData?.nameTh, itemData?.nameEn, lang);
+
+  let detailRows = '';
+  if (bookingType === 'ACCOMMODATION') {
+    const rtName = selectedRoomType
+      ? pick(selectedRoomType.nameTh, selectedRoomType.nameEn, lang)
+      : '—';
+    const n = nights();
+    const est = estimatedPrice();
+    detailRows = `
+      <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #f1f5f9;font-size:13px;">
+        <span style="color:#64748b;">${pick('ประเภทห้อง', 'Room type', lang)}</span>
+        <span style="font-weight:600;color:#334155;">${rtName}</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #f1f5f9;font-size:13px;">
+        <span style="color:#64748b;">${pick('เช็คอิน', 'Check-in', lang)}</span>
+        <span style="font-weight:600;color:#334155;">${fmtDate(checkIn)}</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #f1f5f9;font-size:13px;">
+        <span style="color:#64748b;">${pick('เช็คเอาท์', 'Check-out', lang)}</span>
+        <span style="font-weight:600;color:#334155;">${fmtDate(checkOut)}</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #f1f5f9;font-size:13px;">
+        <span style="color:#64748b;">${pick('จำนวนคืน', 'Nights', lang)}</span>
+        <span style="font-weight:600;color:#334155;">${n} ${tx(t.booking.nights, lang)}</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #f1f5f9;font-size:13px;">
+        <span style="color:#64748b;">${pick('ผู้เข้าพัก', 'Guests', lang)}</span>
+        <span style="font-weight:600;color:#334155;">${guestsParam} ${tx(t.booking.guests, lang)}</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;padding:10px 0 4px;font-size:14px;">
+        <span style="color:#64748b;font-weight:600;">${tx(t.booking.estimated, lang)}</span>
+        <span style="font-weight:700;color:#f59e0b;font-size:18px;">${est.toLocaleString()}.-</span>
+      </div>
+      <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:8px 12px;margin-top:8px;font-size:11px;color:#92400e;display:flex;gap:8px;align-items:flex-start;">
+        <i class="fa-solid fa-circle-info" style="margin-top:2px;flex-shrink:0;color:#f59e0b;"></i>
+        <span>${tx(t.booking.estimatedNote, lang)}</span>
+      </div>`;
+  } else {
+    const schedule = selectedSchedule;
+    const total = estimatedPrice();
+    detailRows = `
+      <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #f1f5f9;font-size:13px;">
+        <span style="color:#64748b;">${pick('วันเดินทาง', 'Departure date', lang)}</span>
+        <span style="font-weight:600;color:#334155;">${schedule ? fmtDate(schedule.departureDate) : '—'}</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #f1f5f9;font-size:13px;">
+        <span style="color:#64748b;">${pick('เวลาออกเดินทาง', 'Departure time', lang)}</span>
+        <span style="font-weight:600;color:#334155;">${schedule?.departureTime || '—'}</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #f1f5f9;font-size:13px;">
+        <span style="color:#64748b;">${pick('จำนวนผู้เดินทาง', 'Guests', lang)}</span>
+        <span style="font-weight:600;color:#334155;">${guestsParam} ${tx(t.booking.guests, lang)}</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;padding:10px 0 4px;font-size:14px;">
+        <span style="color:#64748b;font-weight:600;">${pick('ยอดรวม', 'Total', lang)}</span>
+        <span style="font-weight:700;color:#f59e0b;font-size:18px;">${total.toLocaleString()}.-</span>
+      </div>`;
+  }
+
+  return `
+    <div style="background:#fff;border-radius:16px;border:1px solid #f1f5f9;box-shadow:0 1px 6px rgba(0,0,0,.06);overflow:hidden;">
+      <!-- Hero image -->
+      <div style="height:200px;background:linear-gradient(135deg,#bfdbfe,#a5f3fc);position:relative;overflow:hidden;">
+        ${imgUrl
+          ? `<img src="${imgUrl}" alt="${itemName}" style="width:100%;height:100%;object-fit:cover;">`
+          : `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;"><i class="fa-solid ${bookingType === 'ACCOMMODATION' ? 'fa-bed' : 'fa-water-ladder'}" style="font-size:56px;color:#bfdbfe;opacity:.5;"></i></div>`}
+        <div style="position:absolute;top:12px;left:12px;">
+          <span style="background:${bookingType === 'ACCOMMODATION' ? '#2563eb' : '#0891b2'};color:#fff;font-size:11px;font-weight:700;padding:4px 12px;border-radius:9999px;">
+            <i class="fa-solid ${bookingType === 'ACCOMMODATION' ? 'fa-bed' : 'fa-water-ladder'}" style="margin-right:4px;"></i>${badgeLabel()}
+          </span>
+        </div>
+      </div>
+      <!-- Item info -->
+      <div style="padding:20px 20px 0;">
+        <h2 style="font-weight:700;font-size:18px;color:#1e293b;margin-bottom:4px;">${itemName || '—'}</h2>
+        <p style="font-size:13px;color:#64748b;margin-bottom:16px;">
+          <i class="fa-solid fa-location-dot" style="color:#ef4444;margin-right:4px;"></i>${itemData?.location || pick('ไทย', 'Thailand', lang)}
+        </p>
+      </div>
+      <!-- Detail rows -->
+      <div style="padding:0 20px 20px;">${detailRows}</div>
+    </div>`;
+}
+
+function renderForm() {
+  const session = getUserSession();
+  const nameVal  = session?.name  || '';
+  const phoneVal = session?.phone || '';
+  const emailVal = session?.email || '';
+
+  const payMethods = [
+    { value:'BANK_TRANSFER', icon:'fa-building-columns', label:tx(t.booking.bankTransfer, lang) },
+    { value:'PROMPTPAY',     icon:'fa-qrcode',          label:'PromptPay' },
+    { value:'CREDIT_CARD',   icon:'fa-credit-card',     label:tx(t.booking.creditCard, lang) },
+    { value:'ALIPAY',        icon:'fa-brands fa-alipay',label:'Alipay' },
+    { value:'WECHAT_PAY',    icon:'fa-brands fa-weixin', label:'WeChat Pay' },
+  ];
+
+  return `
+    <div style="background:#fff;border-radius:16px;border:1px solid #f1f5f9;box-shadow:0 1px 6px rgba(0,0,0,.06);padding:24px;">
+      <h3 style="font-weight:700;font-size:16px;color:#1e293b;margin-bottom:20px;">
+        <i class="fa-solid fa-user" style="color:#2563eb;margin-right:8px;"></i>${tx(t.booking.guestInfo, lang)}
+      </h3>
+
+      <div id="form-error" style="display:none;background:#fef2f2;border:1px solid #fecaca;border-radius:10px;padding:12px 16px;margin-bottom:16px;color:#dc2626;font-size:13px;"></div>
+
+      <form id="booking-form" onsubmit="submitBooking(event)">
+        <!-- Full Name -->
+        <div style="margin-bottom:16px;">
+          <label style="display:block;font-size:13px;font-weight:600;color:#475569;margin-bottom:6px;">
+            ${tx(t.booking.fullName, lang)} <span style="color:#ef4444;">*</span>
+          </label>
+          <input type="text" id="guestName" value="${nameVal}" placeholder="${tx(t.booking.fullNamePh, lang)}" required style="">
+        </div>
+
+        <!-- Phone -->
+        <div style="margin-bottom:16px;">
+          <label style="display:block;font-size:13px;font-weight:600;color:#475569;margin-bottom:6px;">
+            ${tx(t.booking.phone, lang)} <span style="color:#ef4444;">*</span>
+          </label>
+          <input type="tel" id="guestPhone" value="${phoneVal}" placeholder="0801234567" required style="">
+        </div>
+
+        <!-- Email -->
+        <div style="margin-bottom:20px;">
+          <label style="display:block;font-size:13px;font-weight:600;color:#475569;margin-bottom:6px;">
+            ${tx(t.booking.email, lang)} <span style="color:#64748b;font-weight:400;font-size:12px;">(${pick('ไม่บังคับ', 'optional', lang)})</span>
+          </label>
+          <input type="email" id="guestEmail" value="${emailVal}" placeholder="email@example.com" style="">
+        </div>
+
+        <!-- Payment method -->
+        <div style="margin-bottom:20px;">
+          <label style="display:block;font-size:13px;font-weight:600;color:#475569;margin-bottom:10px;">
+            <i class="fa-solid fa-wallet" style="color:#2563eb;margin-right:6px;"></i>${tx(t.booking.payment, lang)}
+          </label>
+          <div style="display:flex;flex-wrap:wrap;gap:8px;">
+            ${payMethods.map((m, i) => `
+              <div>
+                <input class="payment-radio" type="radio" name="paymentMethod" id="pm_${m.value}" value="${m.value}" ${i === 0 ? 'checked' : ''}>
+                <label class="payment-label" for="pm_${m.value}">
+                  <i class="fa-solid ${m.icon}" style="font-size:13px;"></i>${m.label}
+                </label>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+
+        <!-- Terms -->
+        <p style="font-size:12px;color:#94a3b8;margin-bottom:20px;line-height:1.6;background:#f8fafc;border-radius:8px;padding:10px 12px;">
+          <i class="fa-solid fa-circle-info" style="color:#93c5fd;margin-right:6px;"></i>${tx(t.booking.terms, lang)}
+        </p>
+
+        <!-- Submit -->
+        <button type="submit" id="submit-btn" style="width:100%;padding:14px;background:#2563eb;color:#fff;border:none;border-radius:12px;font-family:'Prompt',sans-serif;font-size:15px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;transition:background .2s;box-shadow:0 4px 14px rgba(37,99,235,.35);" onmouseover="this.style.background='#1d4ed8'" onmouseout="this.style.background='#2563eb'">
+          <i class="fa-solid fa-calendar-check"></i>${tx(t.booking.confirm, lang)}
+        </button>
+      </form>
+    </div>`;
+}
+
+function render() {
+  const root = document.getElementById('page-root');
+  if (!itemData) {
+    root.innerHTML = `
+      <div style="text-align:center;padding:80px 20px;">
+        <div style="font-size:48px;margin-bottom:16px;">😕</div>
+        <h2 style="font-weight:700;font-size:20px;color:#1e293b;margin-bottom:8px;">${pick('ไม่พบข้อมูล', 'Item not found', lang)}</h2>
+        <p style="color:#64748b;margin-bottom:24px;">${pick('กรุณากลับไปเลือกรายการใหม่', 'Please go back and select an item.', lang)}</p>
+        <a href="${bookingType === 'ACCOMMODATION' ? 'rooms.html' : 'tours.html'}" style="padding:10px 24px;background:#2563eb;color:#fff;border-radius:10px;font-weight:600;font-size:14px;">${pick('กลับ', 'Go back', lang)}</a>
+      </div>`;
+    return;
+  }
+
+  root.innerHTML = `
+    <div style="margin-bottom:28px;">
+      <h1 style="font-size:clamp(20px,4vw,28px);font-weight:700;color:#1e293b;">${tx(t.booking.title, lang)}</h1>
+      <p style="font-size:13px;color:#64748b;margin-top:6px;">${tx(t.booking.summary, lang)}</p>
+    </div>
+    <div id="layout" style="display:flex;gap:24px;align-items:flex-start;">
+      <div id="summary-col" style="width:380px;flex-shrink:0;">${renderSummary()}</div>
+      <div id="form-col" style="flex:1;min-width:0;">${renderForm()}</div>
+    </div>`;
+}
+
+async function submitBooking(e) {
+  e.preventDefault();
+  const btn = document.getElementById('submit-btn');
+  const errEl = document.getElementById('form-error');
+  errEl.style.display = 'none';
+
+  const guestName  = document.getElementById('guestName').value.trim();
+  const guestPhone = document.getElementById('guestPhone').value.trim();
+  const guestEmail = document.getElementById('guestEmail').value.trim();
+  const paymentMethod = document.querySelector('input[name="paymentMethod"]:checked')?.value || 'BANK_TRANSFER';
+
+  if (!guestName || !guestPhone) {
+    errEl.textContent = tx(t.booking.fillAll, lang);
+    errEl.style.display = 'block';
+    return;
+  }
+
+  btn.disabled = true;
+  btn.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin"></i>${tx(t.booking.loading, lang)}`;
+
+  try {
+    let payload = { guestName, guestPhone, guestEmail, paymentMethod, numGuests: guestsParam };
+
+    if (bookingType === 'ACCOMMODATION') {
+      if (!roomSlug || !roomTypeId || !checkIn || !checkOut) {
+        throw new Error(tx(t.booking.missingInfo, lang));
+      }
+      payload = { ...payload, type: 'ACCOMMODATION', roomSlug, roomTypeId, checkIn, checkOut };
+    } else {
+      if (!tourSlug || !scheduleId) {
+        throw new Error(tx(t.booking.missingInfo, lang));
+      }
+      payload = { ...payload, type: 'DIVE_TOUR', tourSlug, scheduleId };
+    }
+
+    const result = await createBooking(payload);
+    const num = result?.bookingNumber || result?.booking?.bookingNumber;
+    if (num) {
+      showToast(pick('จองสำเร็จ!', 'Booking confirmed!', lang));
+      setTimeout(() => { window.location.href = `booking-detail.html?num=${num}`; }, 800);
+    } else {
+      throw new Error(tx(t.booking.error, lang));
+    }
+  } catch (err) {
+    errEl.textContent = err.message || tx(t.booking.error, lang);
+    errEl.style.display = 'block';
+    btn.disabled = false;
+    btn.innerHTML = `<i class="fa-solid fa-calendar-check"></i>${tx(t.booking.confirm, lang)}`;
+  }
+}
+
+async function loadData() {
+  if (bookingType === 'ACCOMMODATION') {
+    itemData = await getRoom(roomSlug);
+    if (itemData) {
+      selectedRoomType = (itemData.types || []).find(rt => String(rt.id) === String(roomTypeId)) || itemData.types?.[0] || null;
+    }
+  } else {
+    itemData = await getTour(tourSlug);
+    if (itemData) {
+      selectedSchedule = (itemData.schedules || []).find(s => String(s.id) === String(scheduleId)) || itemData.schedules?.[0] || null;
+    }
+  }
+  render();
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  initPage({ base: '' });
+  loadData();
+});
+</script>
+</body>
+</html>

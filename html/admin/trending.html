@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ฮิตติดกระแส – JongJongDi Admin</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Prompt', sans-serif; background: #f8fafc; color: #1e293b; }
+  </style>
+  <script src="_lib.js"></script>
+</head>
+<body>
+<script>
+(async function () {
+  renderAdminShell({ activePage: 'trending.html', requireSuperAdmin: true });
+  const content = document.getElementById('page-content');
+
+  let items = [];
+  let rooms = [], tours = [], products = [];
+  let editingId = null;
+
+  const TYPE_CONFIG = {
+    ROOM:    { label: 'ที่พัก',  bg: '#dcfce7', color: '#15803d' },
+    TOUR:    { label: 'ทัวร์',   bg: '#cffafe', color: '#0e7490' },
+    PRODUCT: { label: 'สินค้า',  bg: '#fef9c3', color: '#a16207' },
+  };
+
+  function getItemName(t) {
+    if (t.targetType === 'ROOM')    return t.room?.nameTh || '—';
+    if (t.targetType === 'TOUR')    return t.tour?.nameTh || '—';
+    if (t.targetType === 'PRODUCT') return t.product?.nameTh || '—';
+    return '—';
+  }
+
+  function getItemSlug(t) {
+    if (t.targetType === 'ROOM')    return t.room?.slug || '';
+    return '';
+  }
+
+  function getThumb(t) {
+    const imgs = t.room?.images || t.tour?.images || t.product?.images || [];
+    return imgs[0]?.url || '';
+  }
+
+  function renderItems() {
+    const list = document.getElementById('trending-list');
+    if (!list) return;
+    if (!items.length) {
+      list.innerHTML = `<div style="text-align:center;padding:60px 20px;color:#94a3b8;">
+        <i class="fa-solid fa-fire" style="font-size:32px;color:#cbd5e1;display:block;margin-bottom:10px;"></i>ยังไม่มีรายการ
+      </div>`;
+      return;
+    }
+    list.innerHTML = items.map(t => {
+      const cfg = TYPE_CONFIG[t.targetType] || { label: t.targetType, bg: '#f3f4f6', color: '#374151' };
+      const thumb = getThumb(t);
+      const name = getItemName(t);
+      const slug = getItemSlug(t);
+      const activeBg = t.isActive ? '#dcfce7' : '#fee2e2';
+      const activeColor = t.isActive ? '#15803d' : '#dc2626';
+      const activeLabel = t.isActive ? 'แสดง' : 'ซ่อน';
+
+      return `<div style="background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:16px;display:flex;align-items:center;gap:14px;margin-bottom:10px;">
+        <div style="width:32px;height:32px;border-radius:50%;background:#eff6ff;color:#2563eb;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;flex-shrink:0;">${t.order}</div>
+        ${thumb
+          ? `<img src="${thumb}" style="width:64px;height:64px;border-radius:10px;object-fit:cover;flex-shrink:0;" onerror="this.style.display='none'">`
+          : `<div style="width:64px;height:64px;border-radius:10px;background:#f1f5f9;display:flex;align-items:center;justify-content:center;flex-shrink:0;"><i class="fa-solid fa-image" style="color:#cbd5e1;font-size:22px;"></i></div>`
+        }
+        <div style="flex:1;min-width:0;">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;flex-wrap:wrap;">
+            <span style="background:${cfg.bg};color:${cfg.color};padding:2px 10px;border-radius:999px;font-size:12px;font-weight:600;">${cfg.label}</span>
+            ${t.badge ? `<span style="background:#fef3c7;color:#92400e;padding:2px 10px;border-radius:999px;font-size:12px;font-weight:600;">${t.badge}</span>` : ''}
+          </div>
+          <div style="font-size:14px;font-weight:600;color:#1e293b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${name}</div>
+          <div style="font-size:12px;color:#94a3b8;margin-top:2px;display:flex;gap:10px;flex-wrap:wrap;">
+            ${slug ? `<span>${slug}</span>` : ''}
+            ${t.locationLabel ? `<span><i class="fa-solid fa-location-dot"></i> ${t.locationLabel}</span>` : ''}
+            ${t.oldPrice ? `<span><s>฿${fmt(t.oldPrice)}</s></span>` : ''}
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;">
+          <span style="background:${activeBg};color:${activeColor};padding:3px 10px;border-radius:999px;font-size:12px;font-weight:600;">${activeLabel}</span>
+          <button onclick="openModal(${t.id})" style="background:#eff6ff;color:#2563eb;border:none;padding:6px 11px;border-radius:7px;font-size:13px;font-family:Prompt,sans-serif;cursor:pointer;" title="แก้ไข">
+            <i class="fa-solid fa-pen"></i>
+          </button>
+          <button onclick="toggleVisible(${t.id},${t.isActive})" style="background:${t.isActive ? '#fef9c3' : '#f0fdf4'};color:${t.isActive ? '#a16207' : '#15803d'};border:none;padding:6px 11px;border-radius:7px;font-size:13px;font-family:Prompt,sans-serif;cursor:pointer;" title="${t.isActive ? 'ซ่อน' : 'แสดง'}">
+            <i class="fa-solid ${t.isActive ? 'fa-eye-slash' : 'fa-eye'}"></i>
+          </button>
+          <button onclick="deleteItem(${t.id})" style="background:#fee2e2;color:#dc2626;border:none;padding:6px 11px;border-radius:7px;font-size:13px;font-family:Prompt,sans-serif;cursor:pointer;" title="ลบ">
+            <i class="fa-solid fa-trash"></i>
+          </button>
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  function buildPage() {
+    content.innerHTML = `
+      <!-- Header -->
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:24px;">
+        <div style="display:flex;align-items:center;gap:12px;">
+          <div style="width:44px;height:44px;background:#fff7ed;border-radius:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+            <i class="fa-solid fa-fire" style="color:#f59e0b;font-size:20px;"></i>
+          </div>
+          <div>
+            <h1 style="font-size:20px;font-weight:700;color:#1e293b;line-height:1.2;">ฮิตติดกระแส</h1>
+            <div id="trending-count" style="font-size:13px;color:#64748b;"></div>
+          </div>
+        </div>
+        <button onclick="openModal(null)" style="background:#2563eb;color:#fff;border:none;padding:10px 20px;border-radius:10px;font-size:14px;font-weight:600;font-family:Prompt,sans-serif;cursor:pointer;display:flex;align-items:center;gap:8px;">
+          <i class="fa-solid fa-plus"></i> เพิ่มรายการ
+        </button>
+      </div>
+
+      <!-- List -->
+      <div id="trending-list">
+        <div style="text-align:center;padding:60px;color:#94a3b8;">
+          <i class="fa-solid fa-circle-notch fa-spin" style="font-size:24px;color:#2563eb;"></i>
+        </div>
+      </div>
+
+      <!-- Modal -->
+      <div id="trending-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:500;align-items:center;justify-content:center;padding:20px;">
+        <div style="background:#fff;border-radius:20px;width:100%;max-width:540px;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.2);">
+          <div style="padding:24px;border-bottom:1px solid #e2e8f0;display:flex;align-items:center;justify-content:space-between;">
+            <h2 id="modal-title" style="font-size:17px;font-weight:700;color:#1e293b;"></h2>
+            <button onclick="closeModal()" style="background:none;border:none;font-size:20px;color:#94a3b8;cursor:pointer;line-height:1;">✕</button>
+          </div>
+          <form id="trending-form" onsubmit="submitForm(event)" style="padding:24px;display:flex;flex-direction:column;gap:18px;">
+            <!-- targetType toggle -->
+            <div>
+              <label style="font-size:13px;font-weight:600;color:#374151;display:block;margin-bottom:8px;">ประเภท <span style="color:#dc2626;">*</span></label>
+              <div style="display:flex;gap:8px;">
+                <button type="button" id="btn-ROOM" onclick="setTargetType('ROOM')"
+                  style="flex:1;padding:9px;border-radius:9px;border:2px solid #2563eb;background:#eff6ff;color:#2563eb;font-family:Prompt,sans-serif;font-size:13px;font-weight:600;cursor:pointer;">ที่พัก</button>
+                <button type="button" id="btn-TOUR" onclick="setTargetType('TOUR')"
+                  style="flex:1;padding:9px;border-radius:9px;border:2px solid #e2e8f0;background:#fff;color:#64748b;font-family:Prompt,sans-serif;font-size:13px;font-weight:600;cursor:pointer;">ทัวร์</button>
+                <button type="button" id="btn-PRODUCT" onclick="setTargetType('PRODUCT')"
+                  style="flex:1;padding:9px;border-radius:9px;border:2px solid #e2e8f0;background:#fff;color:#64748b;font-family:Prompt,sans-serif;font-size:13px;font-weight:600;cursor:pointer;">สินค้า</button>
+              </div>
+              <input type="hidden" id="f-target-type" value="ROOM">
+            </div>
+            <!-- Target select -->
+            <div>
+              <label style="font-size:13px;font-weight:600;color:#374151;display:block;margin-bottom:6px;">เลือกรายการ <span style="color:#dc2626;">*</span></label>
+              <select id="f-target-id" required style="width:100%;padding:10px 14px;border:1px solid #d1d5db;border-radius:9px;font-family:Prompt,sans-serif;font-size:14px;outline:none;background:#fff;">
+                <option value="">— เลือก —</option>
+              </select>
+            </div>
+            <div>
+              <label style="font-size:13px;font-weight:600;color:#374151;display:block;margin-bottom:6px;">ลำดับ <span style="color:#dc2626;">*</span></label>
+              <input id="f-order" type="number" min="1" step="1" required placeholder="1"
+                style="width:100%;padding:10px 14px;border:1px solid #d1d5db;border-radius:9px;font-family:Prompt,sans-serif;font-size:14px;outline:none;">
+            </div>
+            <div>
+              <label style="font-size:13px;font-weight:600;color:#374151;display:block;margin-bottom:6px;">badge text</label>
+              <input id="f-badge" type="text" placeholder="เช่น 🔥 ยอดนิยม"
+                style="width:100%;padding:10px 14px;border:1px solid #d1d5db;border-radius:9px;font-family:Prompt,sans-serif;font-size:14px;outline:none;">
+            </div>
+            <div>
+              <label style="font-size:13px;font-weight:600;color:#374151;display:block;margin-bottom:6px;">ราคาเดิม (บาท)</label>
+              <input id="f-old-price" type="number" min="0" step="0.01" placeholder="ราคาก่อนลด"
+                style="width:100%;padding:10px 14px;border:1px solid #d1d5db;border-radius:9px;font-family:Prompt,sans-serif;font-size:14px;outline:none;">
+            </div>
+            <div>
+              <label style="font-size:13px;font-weight:600;color:#374151;display:block;margin-bottom:6px;">สถานที่</label>
+              <input id="f-location-label" type="text" placeholder="เช่น เกาะเต่า, สุราษฎร์ธานี"
+                style="width:100%;padding:10px 14px;border:1px solid #d1d5db;border-radius:9px;font-family:Prompt,sans-serif;font-size:14px;outline:none;">
+            </div>
+            <div>
+              <label style="font-size:13px;font-weight:600;color:#374151;display:block;margin-bottom:6px;">ป้าย CTA</label>
+              <input id="f-cta-label" type="text" placeholder="เช่น จองเลย"
+                style="width:100%;padding:10px 14px;border:1px solid #d1d5db;border-radius:9px;font-family:Prompt,sans-serif;font-size:14px;outline:none;">
+            </div>
+            <div style="display:flex;gap:10px;padding-top:4px;">
+              <button type="button" onclick="closeModal()" style="flex:1;padding:11px;border-radius:10px;border:1px solid #e2e8f0;background:#f8fafc;font-family:Prompt,sans-serif;font-size:14px;font-weight:600;color:#475569;cursor:pointer;">ยกเลิก</button>
+              <button type="submit" style="flex:2;padding:11px;border-radius:10px;border:none;background:#2563eb;color:#fff;font-family:Prompt,sans-serif;font-size:14px;font-weight:600;cursor:pointer;">
+                <i class="fa-solid fa-floppy-disk"></i> บันทึก
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    `;
+  }
+
+  window.setTargetType = function (type) {
+    document.getElementById('f-target-type').value = type;
+    ['ROOM', 'TOUR', 'PRODUCT'].forEach(t => {
+      const btn = document.getElementById('btn-' + t);
+      if (btn) {
+        if (t === type) {
+          btn.style.border = '2px solid #2563eb'; btn.style.background = '#eff6ff'; btn.style.color = '#2563eb';
+        } else {
+          btn.style.border = '2px solid #e2e8f0'; btn.style.background = '#fff'; btn.style.color = '#64748b';
+        }
+      }
+    });
+    // Repopulate select
+    const sel = document.getElementById('f-target-id');
+    if (!sel) return;
+    let src = type === 'ROOM' ? rooms : type === 'TOUR' ? tours : products;
+    sel.innerHTML = '<option value="">— เลือก —</option>' +
+      src.map(x => `<option value="${x.id}">${x.nameTh}</option>`).join('');
+  };
+
+  window.openModal = function (id) {
+    editingId = id;
+    document.getElementById('modal-title').textContent = id ? 'แก้ไขรายการ' : 'เพิ่มรายการใหม่';
+    document.getElementById('trending-form').reset();
+    document.getElementById('f-target-type').value = 'ROOM';
+    setTargetType('ROOM');
+
+    if (id) {
+      const t = items.find(x => x.id === id);
+      if (!t) return;
+      document.getElementById('f-target-type').value = t.targetType;
+      setTargetType(t.targetType);
+      // Set selected target
+      const targetId = t.targetType === 'ROOM' ? t.room?.id : t.targetType === 'TOUR' ? t.tour?.id : t.product?.id;
+      if (targetId) document.getElementById('f-target-id').value = targetId;
+      document.getElementById('f-order').value = t.order;
+      document.getElementById('f-badge').value = t.badge || '';
+      document.getElementById('f-old-price').value = t.oldPrice || '';
+      document.getElementById('f-location-label').value = t.locationLabel || '';
+      document.getElementById('f-cta-label').value = t.ctaLabel || '';
+    }
+
+    document.getElementById('trending-modal').style.display = 'flex';
+  };
+
+  window.closeModal = function () {
+    document.getElementById('trending-modal').style.display = 'none';
+    editingId = null;
+  };
+
+  window.submitForm = async function (e) {
+    e.preventDefault();
+    const btn = e.target.querySelector('[type=submit]');
+    btn.disabled = true;
+    const targetType = document.getElementById('f-target-type').value;
+    const targetId = parseInt(document.getElementById('f-target-id').value);
+    const order = parseInt(document.getElementById('f-order').value);
+    const badge = document.getElementById('f-badge').value.trim() || undefined;
+    const oldPrice = document.getElementById('f-old-price').value ? parseFloat(document.getElementById('f-old-price').value) : undefined;
+    const locationLabel = document.getElementById('f-location-label').value.trim() || undefined;
+    const ctaLabel = document.getElementById('f-cta-label').value.trim() || undefined;
+
+    const body = { targetType, order };
+    if (targetType === 'ROOM') body.roomId = targetId;
+    else if (targetType === 'TOUR') body.tourId = targetId;
+    else body.productId = targetId;
+    if (badge) body.badge = badge;
+    if (oldPrice !== undefined) body.oldPrice = oldPrice;
+    if (locationLabel) body.locationLabel = locationLabel;
+    if (ctaLabel) body.ctaLabel = ctaLabel;
+
+    try {
+      if (editingId) {
+        await adminPatch('/api/trending/' + editingId, body);
+        showToast('แก้ไขสำเร็จ');
+      } else {
+        await adminPost('/api/trending', body);
+        showToast('เพิ่มรายการสำเร็จ');
+      }
+      closeModal();
+      await loadItems();
+    } catch (err) {
+      showToast(err.message || 'เกิดข้อผิดพลาด', 'error');
+    } finally {
+      btn.disabled = false;
+    }
+  };
+
+  window.toggleVisible = async function (id, current) {
+    try {
+      await adminPatch('/api/trending/' + id, { isActive: !current });
+      showToast(!current ? 'แสดงรายการแล้ว' : 'ซ่อนรายการแล้ว');
+      await loadItems();
+    } catch (err) {
+      showToast(err.message || 'เกิดข้อผิดพลาด', 'error');
+    }
+  };
+
+  window.deleteItem = async function (id) {
+    const t = items.find(x => x.id === id);
+    if (!confirm(`ลบ "${getItemName(t)}" ใช่หรือไม่?`)) return;
+    try {
+      await adminDelete('/api/trending/' + id);
+      showToast('ลบรายการสำเร็จ');
+      await loadItems();
+    } catch (err) {
+      showToast(err.message || 'เกิดข้อผิดพลาด', 'error');
+    }
+  };
+
+  async function loadItems() {
+    try {
+      items = await adminGet('/api/trending/admin/list');
+    } catch (e) {
+      items = [];
+    }
+    const cnt = document.getElementById('trending-count');
+    if (cnt) cnt.textContent = items.length + ' รายการ';
+    renderItems();
+  }
+
+  // ── Init ─────────────────────────────────────────────────────
+  buildPage();
+  // Load lists + items in parallel
+  const [r, t, p] = await Promise.all([
+    adminGet('/api/rooms/admin/list').catch(() => []),
+    adminGet('/api/tours/admin/list').catch(() => []),
+    adminGet('/api/products/admin/list').catch(() => []),
+  ]);
+  rooms = r; tours = t; products = p;
+  await loadItems();
+})();
+</script>
+</body>
+</html>

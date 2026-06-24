@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>จองที่พัก | JongJongDi</title>
+  <meta name="description" content="ค้นหาและจองที่พักสุดสวยวิวทะเลอันดามัน ราคาดี จองง่าย">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script src="_lib.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Prompt', sans-serif; color: #334155; background: #f8fafc; -webkit-font-smoothing: antialiased; }
+    a { text-decoration: none; }
+    .rooms-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 24px;
+    }
+    @media (max-width: 900px) {
+      .rooms-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+    @media (max-width: 580px) {
+      .rooms-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<div style="padding-top: 80px; min-height: 100vh;">
+
+  <!-- ─── Page Header ───────────────────────────────────────────────────── -->
+  <div style="background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 60%, #0891b2 100%); padding: 40px 16px 48px;">
+    <div style="max-width: 1200px; margin: 0 auto;">
+      <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
+        <a href="index.html" style="color: rgba(255,255,255,.7); font-size: 13px; display: flex; align-items: center; gap: 4px;">
+          <i class="fa-solid fa-house" style="font-size: 11px;"></i> หน้าแรก
+        </a>
+        <i class="fa-solid fa-chevron-right" style="color: rgba(255,255,255,.4); font-size: 10px;"></i>
+        <span style="color: #fff; font-size: 13px;">จองที่พัก</span>
+      </div>
+      <h1 style="font-size: clamp(22px, 4vw, 36px); font-weight: 700; color: #fff; margin-bottom: 8px;">
+        <i class="fa-solid fa-bed" style="margin-right: 10px; color: #93c5fd;"></i>จองที่พัก
+      </h1>
+      <p style="color: rgba(255,255,255,.8); font-size: 14px; max-width: 520px; line-height: 1.6;">
+        ที่พักสุดสวยวิวทะเลอันดามัน รีสอร์ทริมหาด บังกะโลใต้ต้นไม้ คัดสรรเพื่อคุณโดยเฉพาะ
+      </p>
+
+      <!-- Search bar -->
+      <div style="margin-top: 24px; display: flex; flex-wrap: wrap; gap: 10px; max-width: 760px;">
+        <div style="flex: 1; min-width: 200px; display: flex; align-items: center; gap: 8px; background: rgba(255,255,255,.15); backdrop-filter: blur(8px); border: 1px solid rgba(255,255,255,.3); border-radius: 12px; padding: 10px 14px;">
+          <i class="fa-solid fa-magnifying-glass" style="color: rgba(255,255,255,.7); font-size: 13px;"></i>
+          <input type="text" id="search-input" placeholder="ชื่อที่พัก / สถานที่" style="flex: 1; background: none; border: none; outline: none; color: #fff; font-family: 'Prompt', sans-serif; font-size: 14px; placeholder-color: rgba(255,255,255,.5);">
+        </div>
+        <label style="display: flex; align-items: center; gap: 8px; background: rgba(255,255,255,.15); backdrop-filter: blur(8px); border: 1px solid rgba(255,255,255,.3); border-radius: 12px; padding: 8px 14px; cursor: pointer; min-width: 140px;">
+          <i class="fa-solid fa-calendar-check" style="color: rgba(255,255,255,.7); font-size: 13px;"></i>
+          <span style="display: flex; flex-direction: column;">
+            <span style="font-size: 10px; color: rgba(255,255,255,.6);">เช็คอิน</span>
+            <input type="date" id="ci-input" style="background: none; border: none; outline: none; color: #fff; font-family: 'Prompt', sans-serif; font-size: 13px;">
+          </span>
+        </label>
+        <label style="display: flex; align-items: center; gap: 8px; background: rgba(255,255,255,.15); backdrop-filter: blur(8px); border: 1px solid rgba(255,255,255,.3); border-radius: 12px; padding: 8px 14px; cursor: pointer; min-width: 140px;">
+          <i class="fa-solid fa-calendar-xmark" style="color: rgba(255,255,255,.7); font-size: 13px;"></i>
+          <span style="display: flex; flex-direction: column;">
+            <span style="font-size: 10px; color: rgba(255,255,255,.6);">เช็คเอาท์</span>
+            <input type="date" id="co-input" style="background: none; border: none; outline: none; color: #fff; font-family: 'Prompt', sans-serif; font-size: 13px;">
+          </span>
+        </label>
+        <button onclick="doSearch()" style="padding: 10px 24px; background: #f59e0b; color: #fff; border: none; border-radius: 12px; font-family: 'Prompt', sans-serif; font-weight: 700; font-size: 14px; cursor: pointer; white-space: nowrap; box-shadow: 0 4px 12px rgba(245,158,11,.4); display: flex; align-items: center; gap: 6px;">
+          <i class="fa-solid fa-magnifying-glass"></i> ค้นหา
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── Main Content ───────────────────────────────────────────────────── -->
+  <div style="max-width: 1200px; margin: 0 auto; padding: 28px 16px 60px;">
+
+    <!-- Active filter chips -->
+    <div id="filter-chips" style="display: none; margin-bottom: 20px; display: flex; flex-wrap: wrap; align-items: center; gap: 8px;"></div>
+
+    <!-- Results header -->
+    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px;">
+      <div id="results-count" style="font-size: 14px; color: #64748b;"></div>
+    </div>
+
+    <!-- Room grid -->
+    <div id="rooms-grid" class="rooms-grid">
+      <!-- Loading state -->
+      <div style="grid-column: 1 / -1; text-align: center; padding: 60px 0; color: #94a3b8;">
+        <i class="fa-solid fa-circle-notch fa-spin" style="font-size: 28px;"></i>
+        <p style="margin-top: 12px; font-size: 14px;">กำลังโหลดที่พัก...</p>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+// Read URL params
+let q = getQP('q') || '';
+let checkIn = getQP('checkIn') || '';
+let checkOut = getQP('checkOut') || '';
+
+// Populate search inputs
+document.addEventListener('DOMContentLoaded', () => {
+  initPage({ base: '' });
+
+  if (q) document.getElementById('search-input').value = q;
+  if (checkIn) document.getElementById('ci-input').value = checkIn;
+  if (checkOut) document.getElementById('co-input').value = checkOut;
+
+  renderFilterChips();
+  loadRooms();
+});
+
+function doSearch() {
+  const qVal = document.getElementById('search-input').value.trim();
+  const ci = document.getElementById('ci-input').value;
+  const co = document.getElementById('co-input').value;
+  const p = new URLSearchParams();
+  if (qVal) p.set('q', qVal);
+  if (ci) p.set('checkIn', ci);
+  if (co) p.set('checkOut', co);
+  window.location.href = p.toString() ? `rooms.html?${p}` : 'rooms.html';
+}
+
+// Allow Enter key to search
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('search-input').addEventListener('keydown', e => {
+    if (e.key === 'Enter') doSearch();
+  });
+});
+
+function renderFilterChips() {
+  const lang = getLang();
+  const chips = [];
+
+  if (q) {
+    chips.push(`<span style="display:inline-flex;align-items:center;gap:6px;background:#eff6ff;color:#2563eb;border:1px solid #bfdbfe;border-radius:9999px;padding:4px 12px;font-size:13px;font-weight:500;">
+      <i class="fa-solid fa-magnifying-glass" style="font-size:11px;"></i> ${q}
+    </span>`);
+  }
+  if (checkIn) {
+    chips.push(`<span style="display:inline-flex;align-items:center;gap:6px;background:#eff6ff;color:#2563eb;border:1px solid #bfdbfe;border-radius:9999px;padding:4px 12px;font-size:13px;font-weight:500;">
+      <i class="fa-solid fa-calendar-check" style="font-size:11px;"></i> ${pick('เช็คอิน', 'Check-in', lang)}: ${fmtDate(checkIn)}
+    </span>`);
+  }
+  if (checkOut) {
+    chips.push(`<span style="display:inline-flex;align-items:center;gap:6px;background:#eff6ff;color:#2563eb;border:1px solid #bfdbfe;border-radius:9999px;padding:4px 12px;font-size:13px;font-weight:500;">
+      <i class="fa-solid fa-calendar-xmark" style="font-size:11px;"></i> ${pick('เช็คเอาท์', 'Check-out', lang)}: ${fmtDate(checkOut)}
+    </span>`);
+  }
+
+  const el = document.getElementById('filter-chips');
+  if (chips.length > 0) {
+    el.style.display = 'flex';
+    el.innerHTML = chips.join('') + `
+      <a href="rooms.html" style="display:inline-flex;align-items:center;gap:6px;color:#64748b;font-size:13px;padding:4px 12px;border-radius:9999px;border:1px solid #e2e8f0;background:#fff;">
+        <i class="fa-solid fa-xmark" style="font-size:11px;"></i> ล้างตัวกรอง
+      </a>`;
+  } else {
+    el.style.display = 'none';
+  }
+}
+
+async function loadRooms() {
+  const lang = getLang();
+  const grid = document.getElementById('rooms-grid');
+  const countEl = document.getElementById('results-count');
+
+  try {
+    const rooms = await listRooms({ q, checkIn, checkOut });
+
+    if (!rooms || rooms.length === 0) {
+      grid.innerHTML = `
+        <div style="grid-column:1/-1;text-align:center;padding:80px 16px;color:#94a3b8;">
+          <i class="fa-solid fa-bed" style="font-size:56px;opacity:.3;margin-bottom:16px;display:block;"></i>
+          <p style="font-size:16px;font-weight:600;color:#64748b;margin-bottom:8px;">${pick('ไม่พบที่พัก', 'No rooms found', lang)}</p>
+          <p style="font-size:13px;">${pick('ลองเปลี่ยนคำค้นหาหรือวันที่', 'Try adjusting your search or dates', lang)}</p>
+          <a href="rooms.html" style="display:inline-block;margin-top:20px;padding:8px 20px;background:#2563eb;color:#fff;border-radius:8px;font-size:13px;font-weight:600;">
+            ${pick('ดูทั้งหมด', 'View all', lang)}
+          </a>
+        </div>`;
+      countEl.innerHTML = '';
+      return;
+    }
+
+    countEl.innerHTML = `<i class="fa-solid fa-hotel" style="color:#2563eb;margin-right:6px;"></i>${pick('พบ', 'Found', lang)} <strong>${rooms.length}</strong> ${pick('ที่พัก', 'properties', lang)}`;
+    grid.innerHTML = rooms.map(room => roomCardHTML(room, lang, checkIn, checkOut)).join('');
+
+  } catch (err) {
+    grid.innerHTML = `
+      <div style="grid-column:1/-1;text-align:center;padding:60px 16px;color:#94a3b8;">
+        <i class="fa-solid fa-triangle-exclamation" style="font-size:40px;margin-bottom:12px;display:block;color:#fbbf24;"></i>
+        <p style="font-size:14px;">${pick('เกิดข้อผิดพลาด กรุณาลองใหม่', 'Something went wrong. Please try again.', lang)}</p>
+      </div>`;
+  }
+}
+</script>
+
+</body>
+</html>

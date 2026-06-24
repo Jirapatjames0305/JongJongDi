@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>รายละเอียดการจอง – JongJongDi Admin</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <script src="_lib.js"></script>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: Prompt, sans-serif; }
+
+    .card { background: #fff; border: 1px solid #e2e8f0; border-radius: 14px; padding: 20px 24px; margin-bottom: 16px; }
+    .card-title { font-size: 15px; font-weight: 700; color: #0f172a; margin: 0 0 16px; display: flex; align-items: center; gap: 8px; }
+    .card-title i { color: #2563eb; font-size: 14px; }
+
+    .dl-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 20px; }
+    .dl-item dt { font-size: 12px; color: #64748b; font-weight: 500; margin-bottom: 2px; }
+    .dl-item dd { margin: 0; font-size: 14px; color: #0f172a; font-weight: 500; }
+
+    .action-btn { display: inline-flex; align-items: center; gap: 7px; padding: 9px 18px; border-radius: 9px; font-size: 14px; font-weight: 600; font-family: Prompt, sans-serif; border: none; cursor: pointer; transition: opacity .15s; }
+    .action-btn:hover { opacity: .85; }
+    .action-btn:disabled { opacity: .5; cursor: not-allowed; }
+
+    .pay-status { display: inline-block; padding: 3px 10px; border-radius: 999px; font-size: 12px; font-weight: 600; }
+
+    .spinner { display: inline-block; width: 36px; height: 36px; border: 3px solid #e2e8f0; border-top-color: #2563eb; border-radius: 50%; animation: spin .7s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .two-col { display: grid; grid-template-columns: 2fr 1fr; gap: 16px; align-items: start; }
+    @media (max-width: 900px) { .two-col { grid-template-columns: 1fr; } }
+
+    .back-link { display: inline-flex; align-items: center; gap: 7px; color: #2563eb; text-decoration: none; font-size: 14px; font-weight: 500; margin-bottom: 16px; }
+    .back-link:hover { text-decoration: underline; }
+
+    .success-box { background: #dcfce7; border: 1px solid #86efac; color: #15803d; border-radius: 10px; padding: 10px 16px; font-size: 14px; font-weight: 500; margin-bottom: 14px; display: flex; align-items: center; gap: 8px; }
+
+    .note-textarea { width: 100%; min-height: 90px; padding: 10px 12px; border: 1px solid #e2e8f0; border-radius: 9px; font-family: Prompt, sans-serif; font-size: 14px; color: #0f172a; resize: vertical; outline: none; transition: border-color .15s; }
+    .note-textarea:focus { border-color: #2563eb; }
+
+    @media print {
+      .no-print { display: none !important; }
+      body { font-size: 13px; }
+      .card { box-shadow: none; border: 1px solid #ccc; }
+    }
+  </style>
+</head>
+<body>
+<script>
+(function () {
+  var shell = renderAdminShell({ activePage: 'bookings.html' });
+  if (!shell) return;
+
+  var num = new URLSearchParams(location.search).get('num');
+  if (!num) { location.href = 'bookings.html'; return; }
+
+  var METHOD_LABEL = {
+    BANK_TRANSFER: 'โอนธนาคาร',
+    PROMPTPAY:     'PromptPay',
+    CREDIT_CARD:   'บัตรเครดิต',
+    ALIPAY:        'Alipay',
+    WECHAT_PAY:    'WeChat Pay'
+  };
+
+  var PAY_STATUS_LABEL = {
+    PENDING:  'รอตรวจสลิป',
+    APPROVED: 'อนุมัติแล้ว',
+    REJECTED: 'ปฏิเสธ',
+    REFUNDED: 'คืนเงิน'
+  };
+
+  var PAY_STATUS_STYLE = {
+    PENDING:  'background:#fef9c3;color:#a16207',
+    APPROVED: 'background:#dcfce7;color:#15803d',
+    REJECTED: 'background:#fee2e2;color:#dc2626',
+    REFUNDED: 'background:#ffedd5;color:#c2410c'
+  };
+
+  var NEXT_STATUSES = {
+    PENDING_CONFIRM: [
+      { label: 'ยืนยันการจอง', status: 'CONFIRMED',  color: '#15803d', bg: '#dcfce7', icon: 'fa-circle-check' },
+      { label: 'ยกเลิก',       status: 'CANCELLED',   color: '#dc2626', bg: '#fee2e2', icon: 'fa-circle-xmark' }
+    ],
+    CONFIRMED: [
+      { label: 'เช็คอิน',      status: 'CHECKED_IN',  color: '#0f766e', bg: '#ccfbf1', icon: 'fa-right-to-bracket' },
+      { label: 'ยกเลิก',       status: 'CANCELLED',   color: '#dc2626', bg: '#fee2e2', icon: 'fa-circle-xmark' }
+    ],
+    CHECKED_IN: [
+      { label: 'เสร็จสิ้น',    status: 'COMPLETED',   color: '#475569', bg: '#f1f5f9', icon: 'fa-flag-checkered' },
+      { label: 'ไม่มา',        status: 'NO_SHOW',     color: '#6b7280', bg: '#f3f4f6', icon: 'fa-user-slash' }
+    ]
+  };
+
+  var pc = document.getElementById('page-content');
+
+  function escHtml(s) {
+    return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  function setLoading() {
+    pc.innerHTML += '<div id="detail-root" style="display:flex;justify-content:center;padding:80px 0"><div class="spinner"></div></div>';
+  }
+
+  function showMsg(containerId, msg) {
+    var el = document.getElementById(containerId);
+    if (!el) return;
+    el.innerHTML = '<div class="success-box"><i class="fa-solid fa-circle-check"></i>' + escHtml(msg) + '</div>';
+    setTimeout(function () { if (el) el.innerHTML = ''; }, 4000);
+  }
+
+  function renderPage(b) {
+    var nextActions = NEXT_STATUSES[b.status] || [];
+    var payment = b.payments && b.payments.length > 0 ? b.payments[0] : null;
+
+    // ── Left column ──────────────────────────────────────────
+    var infoCard =
+      '<div class="card">' +
+        '<p class="card-title"><i class="fa-solid fa-user"></i>ข้อมูลผู้จอง</p>' +
+        '<div class="dl-grid">' +
+          '<div class="dl-item"><dt>ชื่อผู้จอง</dt><dd>' + escHtml(b.guestName) + '</dd></div>' +
+          '<div class="dl-item"><dt>เบอร์โทร</dt><dd>' + escHtml(b.guestPhone || '-') + '</dd></div>' +
+          '<div class="dl-item"><dt>อีเมล</dt><dd>' + escHtml(b.guestEmail || '-') + '</dd></div>' +
+          '<div class="dl-item"><dt>จำนวนผู้เข้าพัก</dt><dd>' + (b.numGuests || '-') + ' คน</dd></div>' +
+        '</div>' +
+      '</div>';
+
+    var bookingInfoRows = '';
+    if (b.type === 'ACCOMMODATION') {
+      var roomName = b.room ? b.room.nameTh : '-';
+      bookingInfoRows =
+        '<div class="dl-item"><dt>ห้องพัก</dt><dd>' + escHtml(roomName) + '</dd></div>' +
+        '<div class="dl-item"><dt>วันเช็คอิน</dt><dd>' + (b.checkInDate ? fmtDate(b.checkInDate) : '-') + '</dd></div>' +
+        '<div class="dl-item"><dt>วันเช็คเอาต์</dt><dd>' + (b.checkOutDate ? fmtDate(b.checkOutDate) : '-') + '</dd></div>';
+    } else {
+      var tourName = (b.tourSchedule && b.tourSchedule.tour) ? b.tourSchedule.tour.nameTh : '-';
+      var depDate  = (b.tourSchedule && b.tourSchedule.departureDate) ? fmtDate(b.tourSchedule.departureDate) : '-';
+      var depTime  = (b.tourSchedule && b.tourSchedule.departureTime) ? b.tourSchedule.departureTime : '-';
+      bookingInfoRows =
+        '<div class="dl-item"><dt>ทัวร์</dt><dd>' + escHtml(tourName) + '</dd></div>' +
+        '<div class="dl-item"><dt>วันออกเดินทาง</dt><dd>' + escHtml(depDate) + '</dd></div>' +
+        '<div class="dl-item"><dt>เวลาออกเดินทาง</dt><dd>' + escHtml(depTime) + '</dd></div>';
+    }
+
+    var bookingCard =
+      '<div class="card">' +
+        '<p class="card-title"><i class="fa-solid fa-calendar-check"></i>ข้อมูลการจอง</p>' +
+        '<div class="dl-grid">' +
+          bookingInfoRows +
+        '</div>' +
+        '<div style="margin-top:18px;padding-top:14px;border-top:1px solid #f1f5f9">' +
+          '<div style="font-size:12px;color:#64748b;margin-bottom:4px">ยอดรวมทั้งหมด</div>' +
+          '<div style="font-size:28px;font-weight:700;color:#2563eb">฿' + fmt(b.totalAmount) + '</div>' +
+        '</div>' +
+      '</div>';
+
+    var currentNote = b.internalNote || '';
+    var noteCard =
+      '<div class="card no-print">' +
+        '<p class="card-title"><i class="fa-solid fa-note-sticky"></i>Internal Note</p>' +
+        '<div id="note-msg"></div>' +
+        '<textarea id="note-ta" class="note-textarea" placeholder="บันทึกข้อมูลภายในสำหรับทีมงาน...">' + escHtml(currentNote) + '</textarea>' +
+        '<div style="margin-top:10px;text-align:right">' +
+          '<button class="action-btn no-print" id="btn-note" style="background:#2563eb;color:#fff;font-size:13px;padding:7px 16px">' +
+            '<i class="fa-solid fa-floppy-disk"></i>บันทึก Note' +
+          '</button>' +
+        '</div>' +
+      '</div>';
+
+    var leftCol = infoCard + bookingCard + noteCard;
+
+    // ── Right column ─────────────────────────────────────────
+    var actionCard = '';
+    if (nextActions.length > 0) {
+      var btns = nextActions.map(function (a) {
+        return '<button class="action-btn no-print" data-next="' + a.status + '" style="background:' + a.bg + ';color:' + a.color + ';width:100%;justify-content:center;margin-bottom:8px">' +
+          '<i class="fa-solid ' + a.icon + '"></i>' + a.label + ' → ' + (BOOKING_STATUS_LABEL[a.status] || a.status) +
+        '</button>';
+      }).join('');
+      actionCard =
+        '<div class="card no-print">' +
+          '<p class="card-title"><i class="fa-solid fa-bolt"></i>การดำเนินการ</p>' +
+          '<div id="action-msg"></div>' +
+          btns +
+        '</div>';
+    }
+
+    var payCard = '';
+    if (payment) {
+      var payStatusStyle = PAY_STATUS_STYLE[payment.status] || 'background:#f3f4f6;color:#374151';
+      var slipHtml = payment.slipUrl
+        ? '<div style="margin-top:12px"><a href="' + escHtml(payment.slipUrl) + '" target="_blank" style="display:inline-flex;align-items:center;gap:6px;color:#2563eb;font-size:13px;font-weight:500;text-decoration:none">' +
+            '<i class="fa-solid fa-image"></i>ดูหลักฐานการโอน</a></div>'
+        : '';
+      var approveHtml = '';
+      if (payment.status === 'PENDING') {
+        approveHtml =
+          '<div style="margin-top:14px;padding-top:12px;border-top:1px solid #f1f5f9" class="no-print">' +
+            '<div id="pay-msg"></div>' +
+            '<div style="display:flex;gap:8px">' +
+              '<button class="action-btn" id="btn-approve" style="background:#dcfce7;color:#15803d;flex:1;justify-content:center">' +
+                '<i class="fa-solid fa-circle-check"></i>อนุมัติ' +
+              '</button>' +
+              '<button class="action-btn" id="btn-reject" style="background:#fee2e2;color:#dc2626;flex:1;justify-content:center">' +
+                '<i class="fa-solid fa-circle-xmark"></i>ปฏิเสธ' +
+              '</button>' +
+            '</div>' +
+          '</div>';
+      }
+      payCard =
+        '<div class="card">' +
+          '<p class="card-title"><i class="fa-solid fa-money-bill-transfer"></i>การชำระเงิน</p>' +
+          '<div class="dl-grid">' +
+            '<div class="dl-item"><dt>วิธีชำระ</dt><dd>' + escHtml(METHOD_LABEL[payment.method] || payment.method || '-') + '</dd></div>' +
+            '<div class="dl-item"><dt>ยอดชำระ</dt><dd style="font-weight:700">฿' + fmt(payment.amount) + '</dd></div>' +
+            '<div class="dl-item"><dt>สถานะ</dt><dd><span class="pay-status" style="' + payStatusStyle + '">' + (PAY_STATUS_LABEL[payment.status] || payment.status) + '</span></dd></div>' +
+            '<div class="dl-item"><dt>วันที่ชำระ</dt><dd>' + (payment.createdAt ? fmtDate(payment.createdAt) : '-') + '</dd></div>' +
+          '</div>' +
+          slipHtml +
+          approveHtml +
+        '</div>';
+    }
+
+    var rightCol = actionCard + payCard;
+
+    // ── Page header ───────────────────────────────────────────
+    var header =
+      '<a class="back-link no-print" href="bookings.html"><i class="fa-solid fa-arrow-left"></i>กลับ</a>' +
+      '<div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:20px">' +
+        '<div>' +
+          '<h1 style="margin:0;font-size:22px;font-weight:700;color:#0f172a">' + escHtml(b.bookingNumber) + '</h1>' +
+          '<div style="font-size:13px;color:#64748b;margin-top:4px">จอง ' + fmtDate(b.createdAt) + '  ' + bookingStatusBadge(b.status) + '</div>' +
+        '</div>' +
+        '<button class="action-btn no-print" onclick="window.print()" style="background:#f8fafc;color:#374151;border:1px solid #e2e8f0">' +
+          '<i class="fa-solid fa-print"></i>พิมพ์' +
+        '</button>' +
+      '</div>';
+
+    document.getElementById('detail-root').innerHTML =
+      header +
+      '<div class="two-col">' +
+        '<div>' + leftCol + '</div>' +
+        '<div>' + rightCol + '</div>' +
+      '</div>';
+
+    // ── Wire up events ────────────────────────────────────────
+    // Note save
+    var btnNote = document.getElementById('btn-note');
+    if (btnNote) {
+      btnNote.addEventListener('click', function () {
+        var text = document.getElementById('note-ta').value;
+        btnNote.disabled = true;
+        adminPatch('/api/bookings/admin/' + encodeURIComponent(num), { status: b.status, internalNote: text })
+          .then(function () {
+            btnNote.disabled = false;
+            showMsg('note-msg', 'บันทึก Note เรียบร้อยแล้ว');
+          })
+          .catch(function (err) {
+            btnNote.disabled = false;
+            showToast(err.message, 'error');
+          });
+      });
+    }
+
+    // Status action buttons
+    var actionBtns = document.querySelectorAll('[data-next]');
+    actionBtns.forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var nextStatus = btn.dataset.next;
+        actionBtns.forEach(function (b2) { b2.disabled = true; });
+        adminPatch('/api/bookings/admin/' + encodeURIComponent(num), { status: nextStatus })
+          .then(function () {
+            showToast('อัปเดตสถานะเรียบร้อยแล้ว');
+            setTimeout(function () { location.reload(); }, 800);
+          })
+          .catch(function (err) {
+            actionBtns.forEach(function (b2) { b2.disabled = false; });
+            showToast(err.message, 'error');
+          });
+      });
+    });
+
+    // Payment approve / reject
+    var btnApprove = document.getElementById('btn-approve');
+    var btnReject  = document.getElementById('btn-reject');
+
+    function handlePayment(status) {
+      if (btnApprove) btnApprove.disabled = true;
+      if (btnReject)  btnReject.disabled  = true;
+      adminPatch('/api/bookings/admin/' + encodeURIComponent(num) + '/payment', { status: status })
+        .then(function () {
+          showMsg('pay-msg', status === 'APPROVED' ? 'อนุมัติการชำระเงินแล้ว' : 'ปฏิเสธการชำระเงินแล้ว');
+          setTimeout(function () { location.reload(); }, 1000);
+        })
+        .catch(function (err) {
+          if (btnApprove) btnApprove.disabled = false;
+          if (btnReject)  btnReject.disabled  = false;
+          showToast(err.message, 'error');
+        });
+    }
+
+    if (btnApprove) btnApprove.addEventListener('click', function () { handlePayment('APPROVED'); });
+    if (btnReject)  btnReject.addEventListener('click',  function () { handlePayment('REJECTED'); });
+  }
+
+  function render404() {
+    document.getElementById('detail-root').innerHTML =
+      '<div style="text-align:center;padding:80px 20px">' +
+        '<div style="font-size:48px;color:#e2e8f0;margin-bottom:16px"><i class="fa-solid fa-calendar-xmark"></i></div>' +
+        '<h2 style="margin:0 0 8px;color:#0f172a">ไม่พบการจองนี้</h2>' +
+        '<p style="color:#64748b;margin:0 0 20px">เลขการจอง <strong>' + escHtml(num) + '</strong> ไม่มีในระบบ</p>' +
+        '<a href="bookings.html" style="display:inline-flex;align-items:center;gap:8px;padding:10px 20px;background:#2563eb;color:#fff;border-radius:9px;text-decoration:none;font-weight:600;font-size:14px">' +
+          '<i class="fa-solid fa-arrow-left"></i>กลับไปรายการจอง' +
+        '</a>' +
+      '</div>';
+  }
+
+  function escHtml(s) {
+    return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  // Initialise
+  pc.innerHTML += '<div id="detail-root" style="display:flex;justify-content:center;padding:80px 0"><div class="spinner"></div></div>';
+
+  adminGet('/api/bookings/admin/' + encodeURIComponent(num))
+    .then(function (b) {
+      renderPage(b);
+    })
+    .catch(function (err) {
+      if (err.message && (err.message.indexOf('404') !== -1 || err.message.toLowerCase().indexOf('not found') !== -1)) {
+        render404();
+      } else {
+        document.getElementById('detail-root').innerHTML =
+          '<div style="padding:40px;text-align:center;color:#dc2626">' +
+          '<i class="fa-solid fa-circle-exclamation" style="margin-right:8px"></i>' + escHtml(err.message) + '</div>';
+      }
+    });
+})();
+</script>
+</body>
+</html>

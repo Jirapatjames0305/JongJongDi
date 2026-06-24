@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ยอดโอน/ใบสรุป – JongJongDi Admin</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <script src="_lib.js"></script>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: Prompt, sans-serif; }
+    .table-wrap { overflow-x: auto; border-radius: 12px; border: 1px solid #e2e8f0; }
+    table { width: 100%; border-collapse: collapse; background: #fff; font-size: 14px; }
+    thead th { background: #f8fafc; padding: 11px 14px; text-align: left; font-weight: 600; color: #475569; font-size: 13px; border-bottom: 1px solid #e2e8f0; white-space: nowrap; }
+    tbody tr { border-bottom: 1px solid #f1f5f9; transition: background .12s; }
+    tbody tr:last-child { border-bottom: none; }
+    tbody tr:hover { background: #f8fafc; }
+    tbody td { padding: 12px 14px; vertical-align: middle; color: #334155; }
+    tfoot tr { border-top: 2px solid #e2e8f0; background: #f8fafc; }
+    tfoot td { padding: 12px 14px; font-weight: 700; color: #0f172a; font-size: 14px; }
+    .stat-card { flex: 1; min-width: 160px; background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 18px 20px; }
+    .stat-label { font-size: 13px; color: #64748b; margin-bottom: 6px; }
+    .stat-value { font-size: 22px; font-weight: 700; }
+    .spinner { display: inline-block; width: 32px; height: 32px; border: 3px solid #e2e8f0; border-top-color: #2563eb; border-radius: 50%; animation: spin .7s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .empty-state { text-align: center; padding: 60px 20px; color: #94a3b8; }
+    .empty-state i { font-size: 40px; margin-bottom: 12px; display: block; }
+    select.sel { padding: 7px 11px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px; font-family: Prompt, sans-serif; color: #334155; background: #fff; cursor: pointer; }
+    select.sel:focus { outline: none; border-color: #2563eb; box-shadow: 0 0 0 2px #bfdbfe; }
+    .btn-print { display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; border-radius: 8px; background: #2563eb; color: #fff; font-size: 14px; font-weight: 500; font-family: Prompt, sans-serif; border: none; cursor: pointer; transition: background .12s; }
+    .btn-print:hover { background: #1d4ed8; }
+    @media print {
+      .no-print { display: none !important; }
+      body { margin: 0; }
+      .table-wrap { border: none; }
+    }
+  </style>
+</head>
+<body>
+<script>
+(function () {
+  var shell = renderAdminShell({ activePage: 'payouts.html', requireSuperAdmin: true });
+  if (!shell) return;
+
+  var now = new Date();
+  var currentYear  = now.getFullYear();
+  var currentMonth = now.getMonth() + 1;
+
+  function escHtml(s) {
+    return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  function buildYearOptions() {
+    var html = '';
+    for (var y = currentYear; y >= currentYear - 4; y--) {
+      html += '<option value="' + y + '"' + (y === currentYear ? ' selected' : '') + '>' + y + '</option>';
+    }
+    return html;
+  }
+
+  function buildMonthOptions() {
+    var MONTHS = ['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน',
+                  'กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
+    return MONTHS.map(function (name, i) {
+      var val = i + 1;
+      return '<option value="' + val + '"' + (val === currentMonth ? ' selected' : '') + '>' + name + '</option>';
+    }).join('');
+  }
+
+  function renderShell() {
+    document.getElementById('page-content').innerHTML +=
+      '<div class="no-print" style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:20px">' +
+        '<div>' +
+          '<h1 style="margin:0;font-size:22px;font-weight:700;color:#0f172a">ยอดโอน / ใบสรุป</h1>' +
+          '<div style="font-size:13px;color:#64748b;margin-top:3px">สรุปยอดโอนให้ผู้ประกอบการแต่ละราย</div>' +
+        '</div>' +
+        '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">' +
+          '<select class="sel" id="sel-year">' + buildYearOptions() + '</select>' +
+          '<select class="sel" id="sel-month">' + buildMonthOptions() + '</select>' +
+          '<button class="btn-print" onclick="window.print()">' +
+            '<i class="fa-solid fa-print"></i>พิมพ์' +
+          '</button>' +
+        '</div>' +
+      '</div>' +
+      '<div id="stats-row" style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:20px"></div>' +
+      '<div id="tbl-area"></div>';
+
+    document.getElementById('sel-year').addEventListener('change', loadPayouts);
+    document.getElementById('sel-month').addEventListener('change', loadPayouts);
+  }
+
+  function renderStats(payouts) {
+    var gross = 0, comm = 0, net = 0;
+    payouts.forEach(function (p) {
+      gross += p.grossAmount      || 0;
+      comm  += p.commissionAmount || 0;
+      net   += p.netAmount        || 0;
+    });
+    document.getElementById('stats-row').innerHTML =
+      '<div class="stat-card">' +
+        '<div class="stat-label"><i class="fa-solid fa-coins" style="color:#2563eb;margin-right:6px"></i>รายได้รวม</div>' +
+        '<div class="stat-value" style="color:#2563eb">฿' + fmt(gross) + '</div>' +
+      '</div>' +
+      '<div class="stat-card">' +
+        '<div class="stat-label"><i class="fa-solid fa-percent" style="color:#f59e0b;margin-right:6px"></i>ค่าคอมทั้งหมด</div>' +
+        '<div class="stat-value" style="color:#f59e0b">฿' + fmt(comm) + '</div>' +
+      '</div>' +
+      '<div class="stat-card">' +
+        '<div class="stat-label"><i class="fa-solid fa-money-bill-transfer" style="color:#16a34a;margin-right:6px"></i>ยอดโอนสุทธิ</div>' +
+        '<div class="stat-value" style="color:#16a34a">฿' + fmt(net) + '</div>' +
+      '</div>';
+  }
+
+  function renderTable(payouts) {
+    if (!payouts || payouts.length === 0) {
+      document.getElementById('tbl-area').innerHTML =
+        '<div class="empty-state"><i class="fa-solid fa-file-invoice-dollar"></i>ไม่มีข้อมูลสำหรับเดือนที่เลือก</div>';
+      return;
+    }
+
+    var totalGross = 0, totalComm = 0, totalNet = 0, totalBookings = 0;
+    var rows = payouts.map(function (p) {
+      totalGross    += p.grossAmount      || 0;
+      totalComm     += p.commissionAmount || 0;
+      totalNet      += p.netAmount        || 0;
+      totalBookings += p.bookingCount     || 0;
+      return '<tr>' +
+        '<td>' +
+          '<div style="font-weight:600;color:#0f172a">' + escHtml(p.operatorName) + '</div>' +
+          '<div style="font-size:12px;color:#64748b;margin-top:2px">' + escHtml(p.businessName || '-') + '</div>' +
+        '</td>' +
+        '<td style="text-align:center;font-weight:500">' + (p.bookingCount || 0) + '</td>' +
+        '<td style="white-space:nowrap;font-weight:500">฿' + fmt(p.grossAmount) + '</td>' +
+        '<td style="white-space:nowrap;color:#64748b">฿' + fmt(p.commissionAmount) + '</td>' +
+        '<td style="white-space:nowrap;font-weight:700;color:#2563eb">฿' + fmt(p.netAmount) + '</td>' +
+      '</tr>';
+    }).join('');
+
+    document.getElementById('tbl-area').innerHTML =
+      '<div class="table-wrap">' +
+        '<table>' +
+          '<thead><tr>' +
+            '<th>ชื่อ / ธุรกิจ</th>' +
+            '<th style="text-align:center">การจอง</th>' +
+            '<th>รายได้รวม</th>' +
+            '<th>ค่าคอม</th>' +
+            '<th>ยอดโอนสุทธิ</th>' +
+          '</tr></thead>' +
+          '<tbody>' + rows + '</tbody>' +
+          '<tfoot><tr>' +
+            '<td>รวมทั้งหมด</td>' +
+            '<td style="text-align:center">' + totalBookings + '</td>' +
+            '<td style="white-space:nowrap">฿' + fmt(totalGross) + '</td>' +
+            '<td style="white-space:nowrap;color:#64748b;font-weight:400">฿' + fmt(totalComm) + '</td>' +
+            '<td style="white-space:nowrap;color:#2563eb">฿' + fmt(totalNet) + '</td>' +
+          '</tr></tfoot>' +
+        '</table>' +
+      '</div>';
+  }
+
+  function setLoading() {
+    document.getElementById('stats-row').innerHTML = '';
+    document.getElementById('tbl-area').innerHTML =
+      '<div style="text-align:center;padding:60px 0"><div class="spinner"></div></div>';
+  }
+
+  function loadPayouts() {
+    setLoading();
+    var year  = document.getElementById('sel-year').value;
+    var month = document.getElementById('sel-month').value;
+    adminGet('/api/payouts/admin?year=' + year + '&month=' + month).then(function (data) {
+      var list = Array.isArray(data) ? data : (data.payouts || []);
+      renderStats(list);
+      renderTable(list);
+    }).catch(function (err) {
+      document.getElementById('tbl-area').innerHTML =
+        '<div style="padding:40px;text-align:center;color:#dc2626">' +
+        '<i class="fa-solid fa-circle-exclamation" style="margin-right:8px"></i>' + escHtml(err.message) + '</div>';
+    });
+  }
+
+  renderShell();
+  loadPayouts();
+})();
+</script>
+</body>
+</html>
