@@ -14,5 +14,10 @@ cd ~/JongJongDi
 git pull origin main
 DOCKER_BUILDKIT=0 docker compose -f docker-compose.prod.yml build
 docker compose -f docker-compose.prod.yml up -d
-curl -sf http://localhost:4000/health && echo "OK" || echo "FAILED"
+```
+
+## ทดสอบ (รอ 5 วินาทีหลัง up -d)
+
+```bash
+sleep 5 && curl -sf http://localhost:4000/health && echo "OK" || echo "FAILED"
 ```

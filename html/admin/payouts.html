@@ -95,9 +95,9 @@
   function renderStats(payouts) {
     var gross = 0, comm = 0, net = 0;
     payouts.forEach(function (p) {
-      gross += p.grossAmount      || 0;
-      comm  += p.commissionAmount || 0;
-      net   += p.netAmount        || 0;
+      gross += p.gross      || 0;
+      comm  += p.commission || 0;
+      net   += p.net        || 0;
     });
     document.getElementById('stats-row').innerHTML =
       '<div class="stat-card">' +
@@ -123,19 +123,19 @@
 
     var totalGross = 0, totalComm = 0, totalNet = 0, totalBookings = 0;
     var rows = payouts.map(function (p) {
-      totalGross    += p.grossAmount      || 0;
-      totalComm     += p.commissionAmount || 0;
-      totalNet      += p.netAmount        || 0;
+      totalGross    += p.gross      || 0;
+      totalComm     += p.commission || 0;
+      totalNet      += p.net        || 0;
       totalBookings += p.bookingCount     || 0;
       return '<tr>' +
         '<td>' +
-          '<div style="font-weight:600;color:#0f172a">' + escHtml(p.operatorName) + '</div>' +
+          '<div style="font-weight:600;color:#0f172a">' + escHtml(p.name) + '</div>' +
           '<div style="font-size:12px;color:#64748b;margin-top:2px">' + escHtml(p.businessName || '-') + '</div>' +
         '</td>' +
         '<td style="text-align:center;font-weight:500">' + (p.bookingCount || 0) + '</td>' +
-        '<td style="white-space:nowrap;font-weight:500">฿' + fmt(p.grossAmount) + '</td>' +
-        '<td style="white-space:nowrap;color:#64748b">฿' + fmt(p.commissionAmount) + '</td>' +
-        '<td style="white-space:nowrap;font-weight:700;color:#2563eb">฿' + fmt(p.netAmount) + '</td>' +
+        '<td style="white-space:nowrap;font-weight:500">฿' + fmt(p.gross) + '</td>' +
+        '<td style="white-space:nowrap;color:#64748b">฿' + fmt(p.commission) + '</td>' +
+        '<td style="white-space:nowrap;font-weight:700;color:#2563eb">฿' + fmt(p.net) + '</td>' +
       '</tr>';
     }).join('');
 
@@ -171,8 +171,9 @@
     setLoading();
     var year  = document.getElementById('sel-year').value;
     var month = document.getElementById('sel-month').value;
-    adminGet('/api/payouts/admin?year=' + year + '&month=' + month).then(function (data) {
-      var list = Array.isArray(data) ? data : (data.payouts || []);
+    var ym = year + '-' + String(month).padStart(2, '0');
+    adminGet('/api/payouts?month=' + ym).then(function (data) {
+      var list = (data && data.rows) || [];
       renderStats(list);
       renderTable(list);
     }).catch(function (err) {
